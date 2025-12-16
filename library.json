@@ -14,12 +14,6 @@
   },
   "license": "MIT",
   "homepage": "",
-  "dependencies": [
-    {
-      "name": "bblanchon/ArduinoJson",
-      "version": "^7.2.0"
-    }
-  ],
   "frameworks": "arduino",
   "platforms": "*",
   "build": {
