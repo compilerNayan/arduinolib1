@@ -1,6 +1,24 @@
 cmake_minimum_required(VERSION 3.14)
 project(arduinolib1 VERSION 1.0.0 LANGUAGES CXX)
 
+# Run pre-build script during configuration (runs even if client creates own library)
+# This will run whenever this CMakeLists.txt is processed
+find_program(PYTHON_EXECUTABLE python3 python)
+if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py")
+    execute_process(
+        COMMAND ${PYTHON_EXECUTABLE} 
+            "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE PRE_BUILD_RESULT
+        OUTPUT_VARIABLE PRE_BUILD_OUTPUT
+        ERROR_VARIABLE PRE_BUILD_ERROR
+        ERROR_QUIET  # Don't fail if script errors (it needs PlatformIO env)
+    )
+    if(PRE_BUILD_OUTPUT)
+        message(STATUS "arduinolib1 pre-build: ${PRE_BUILD_OUTPUT}")
+    endif()
+endif()
+
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
