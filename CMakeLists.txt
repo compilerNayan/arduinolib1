@@ -29,9 +29,12 @@ add_library(arduinolib1 INTERFACE)
 # Set target properties
 set_target_properties(arduinolib1 PROPERTIES
     VERSION ${PROJECT_VERSION}
-    INTERFACE_INCLUDE_DIRECTORIES
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-        $<INSTALL_INTERFACE:include>
+)
+
+# Set include directories
+target_include_directories(arduinolib1 INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
 )
 
 # Add header file to the library
@@ -47,14 +50,12 @@ target_sources(arduinolib1 INTERFACE
 find_program(PYTHON_EXECUTABLE python3 python REQUIRED)
 
 # Create a custom target that runs the pre-build script
-# The ALL flag ensures it's built by default
 add_custom_target(arduinolib1_pre_build
     COMMAND ${PYTHON_EXECUTABLE} 
         "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Running arduinolib1 pre-build script"
     VERBATIM
-    ALL
 )
 
 # Make the library depend on the pre-build step
@@ -65,6 +66,7 @@ include(GNUInstallDirs)
 
 install(TARGETS arduinolib1
     EXPORT arduinolib1Targets
+    FILE_SET HEADERS
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
