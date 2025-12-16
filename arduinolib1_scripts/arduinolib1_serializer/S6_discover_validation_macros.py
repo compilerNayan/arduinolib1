@@ -16,13 +16,58 @@ from typing import Dict, List, Optional
 
 print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
 
+# Import get_client_files from arduinolib1_core
+# First, find the arduinolib1_scripts directory to add to path
+try:
+    script_file = os.path.abspath(__file__)
+    current_dir = os.path.dirname(script_file)
+    # current_dir is arduinolib1_serializer/, so parent is arduinolib1_scripts/
+    arduinolib1_scripts_dir = os.path.dirname(current_dir)
+except NameError:
+    # __file__ not available, try to find from globals or search
+    arduinolib1_scripts_dir = None
+    if 'library_scripts_dir' in globals():
+        arduinolib1_scripts_dir = str(globals()['library_scripts_dir'])
+    elif 'library_dir' in globals():
+        # library_dir is parent of arduinolib1_scripts
+        potential = os.path.join(str(globals()['library_dir']), 'arduinolib1_scripts')
+        if os.path.exists(potential):
+            arduinolib1_scripts_dir = potential
+    else:
+        # Search from current directory
+        search_dir = os.getcwd()
+        for _ in range(5):  # Search up to 5 levels
+            potential = os.path.join(search_dir, 'arduinolib1_scripts')
+            if os.path.exists(potential) and os.path.isdir(potential):
+                arduinolib1_scripts_dir = potential
+                break
+            parent = os.path.dirname(search_dir)
+            if parent == search_dir:  # Reached root
+                break
+            search_dir = parent
+
+# Add to path and import
+get_client_files = None
+if arduinolib1_scripts_dir and os.path.exists(arduinolib1_scripts_dir):
+    core_dir = os.path.join(arduinolib1_scripts_dir, 'arduinolib1_core')
+    if os.path.exists(core_dir):
+        sys.path.insert(0, core_dir)
+        try:
+            from arduinolib1_get_client_files import get_client_files
+        except ImportError as e:
+            print(f"Warning: Could not import get_client_files: {e}")
+    else:
+        print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
+else:
+    print(f"Warning: Could not find arduinolib1_scripts directory")
+
 def find_validation_macro_definitions(search_directories: List[str] = None) -> Dict[str, str]:
     """
     Discover all validation macros by scanning files for the pattern:
     #define MacroName /* Validation Function -> FunctionName */
     
     Args:
-        search_directories: List of directories to search (default: src and platform)
+        search_directories: List of directories to search (default: uses get_client_files for project_dir and library_dir)
         
     Returns:
         Dictionary mapping macro names to validation function names
@@ -34,23 +79,56 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
     # Skip commented lines (lines starting with //)
     pattern = r'^[^/]*#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+)\s*\*/'
     
-    # If search_directories is None, try to use client_files from 05_list_client_files.py
+    header_files = []
+    
+    # If search_directories is None, use get_client_files to get files from both project_dir and library_dir
     if search_directories is None:
-        # Check if client_files is available in global scope
-        if 'client_files' in globals():
-            # Use client_files - filter to only header files
-            header_files = [f for f in globals()['client_files'] if f.endswith(('.h', '.hpp'))]
-            search_directories = []  # Will use file list instead
-        elif 'get_client_files' in globals():
-            # Get header files from client
-            header_files = globals()['get_client_files'](['.h', '.hpp'])
+        if get_client_files is not None:
+            # Get project_dir and library_dir from globals or environment
+            project_dir = None
+            library_dir = None
+            
+            if 'project_dir' in globals():
+                project_dir = globals()['project_dir']
+            elif 'PROJECT_DIR' in os.environ:
+                project_dir = os.environ['PROJECT_DIR']
+            elif 'CMAKE_PROJECT_DIR' in os.environ:
+                project_dir = os.environ['CMAKE_PROJECT_DIR']
+            
+            if 'library_dir' in globals():
+                library_dir = globals()['library_dir']
+            
+            # Get header files from project_dir (client project)
+            if project_dir:
+                try:
+                    project_header_files = get_client_files(project_dir, file_extensions=['.h', '.hpp'])
+                    header_files.extend(project_header_files)
+                except Exception as e:
+                    print(f"Warning: Failed to get client files from project_dir: {e}")
+            
+            # Get files from library_dir (all files, not just headers, since validation macros might be in any file)
+            if library_dir:
+                try:
+                    library_files = get_client_files(library_dir, skip_exclusions=True)
+                    # Filter to only header files for consistency
+                    library_header_files = [f for f in library_files if f.endswith(('.h', '.hpp'))]
+                    header_files.extend(library_header_files)
+                except Exception as e:
+                    print(f"Warning: Failed to get library files from library_dir: {e}")
+            
             search_directories = []  # Will use file list instead
         else:
-            # Fallback to default directories
-            search_directories = ['src', 'platform']
-            header_files = []
+            # Fallback: Check if client_files is available in global scope
+            if 'client_files' in globals():
+                # Use client_files - filter to only header files
+                header_files = [f for f in globals()['client_files'] if f.endswith(('.h', '.hpp'))]
+                search_directories = []  # Will use file list instead
+            else:
+                # Fallback to default directories
+                search_directories = ['src', 'platform']
     else:
-        header_files = []
+        # search_directories was provided, use directory-based search
+        pass
     
     # If we have header_files list, use it directly
     if header_files:
@@ -85,8 +163,9 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
             except Exception as e:
                 # Skip files that can't be read
                 continue
-    else:
-        # Use directory-based search (original logic)
+    
+    # Use directory-based search if search_directories is provided (fallback)
+    if search_directories:
         for search_dir in search_directories:
             if not os.path.exists(search_dir):
                 continue
