@@ -23,7 +23,7 @@ def execute_scripts(project_dir, library_dir):
         print("=" * 60)
     
     if library_dir:
-        library_files = get_client_files(library_dir, file_extensions=['.h', '.cpp'])
+        library_files = get_client_files(library_dir)
         print(f"\nFound {len(library_files)} files in library:")
         print("=" * 60)
         for file in library_files:
