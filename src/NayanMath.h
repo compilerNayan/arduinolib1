@@ -1,7 +1,7 @@
 #ifndef NAYANMATH_H
 #define NAYANMATH_H
 
-#include <ArduinoJson.h>
+#include <ArduinoJsonee.h>
 
 namespace NayanMath {
 
