@@ -3,7 +3,7 @@ Script to execute client file processing.
 This script imports get_client_files and processes the client project files.
 """
 
-from arduinolib1_core.get_client_files import get_client_files
+from arduinolib1_core.arduinolib1_get_client_files import get_client_files
 
 
 def execute_scripts(project_dir):
