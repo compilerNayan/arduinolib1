@@ -37,13 +37,8 @@ target_include_directories(arduinolib1 INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
-# Add header file to the library
-target_sources(arduinolib1 INTERFACE
-    FILE_SET HEADERS
-    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
-    FILES
-        src/NayanMath.h
-)
+# Note: For INTERFACE libraries, we don't need to add header files to target_sources
+# The include directories are sufficient for consumers to find the headers
 
 # Add pre-build script execution
 # Note: This script requires PlatformIO environment to run properly
