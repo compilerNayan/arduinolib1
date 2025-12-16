@@ -26,15 +26,17 @@ target_sources(arduinolib1 INTERFACE
 
 # Add pre-build script execution
 # Note: This script requires PlatformIO environment to run properly
-# It will be executed before building any target that depends on arduinolib1
 find_program(PYTHON_EXECUTABLE python3 python REQUIRED)
 
+# Create a custom target that runs the pre-build script
+# The ALL flag ensures it's built by default
 add_custom_target(arduinolib1_pre_build
     COMMAND ${PYTHON_EXECUTABLE} 
         "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Running arduinolib1 pre-build script"
     VERBATIM
+    ALL
 )
 
 # Make the library depend on the pre-build step
