@@ -12,9 +12,9 @@ from pathlib import Path
 cwd = Path(os.getcwd())
 current = cwd
 for _ in range(10):  # Search up to 10 levels
-    potential = current / "arduinolib1_scripts" / "get_client_files.py"
-    if potential.exists():
-        scripts_dir = potential.parent
+    potential = current / "arduinolib1_scripts"
+    if potential.exists() and potential.is_dir():
+        scripts_dir = potential
         sys.path.insert(0, str(scripts_dir))
         from get_client_files import get_client_files
         print(f"✓ Found library path by searching up directory tree: {scripts_dir}")
@@ -24,7 +24,7 @@ for _ in range(10):  # Search up to 10 levels
         break
     current = parent
 else:
-    raise ImportError("Could not find get_client_files.py")
+    raise ImportError("Could not find arduinolib1_scripts directory")
 
 # Get the project directory from PlatformIO environment
 # The PROJECT_DIR is available in the environment
