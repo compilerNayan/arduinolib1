@@ -59,8 +59,17 @@ target_include_directories(arduinolib1 INTERFACE
 find_program(PYTHON_EXECUTABLE python3 python REQUIRED)
 
 # Create a custom target that runs the pre-build script
+# Set the project directory environment variable for the script
+if(CMAKE_SOURCE_DIR)
+    set(CLIENT_PROJECT_DIR ${CMAKE_SOURCE_DIR})
+else()
+    # Fallback if CMAKE_SOURCE_DIR is not available
+    get_filename_component(CLIENT_PROJECT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+endif()
+
 add_custom_target(arduinolib1_pre_build
-    COMMAND ${PYTHON_EXECUTABLE} 
+    COMMAND ${CMAKE_COMMAND} -E env "CMAKE_PROJECT_DIR=${CLIENT_PROJECT_DIR}"
+        ${PYTHON_EXECUTABLE} 
         "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Running arduinolib1 pre-build script"
