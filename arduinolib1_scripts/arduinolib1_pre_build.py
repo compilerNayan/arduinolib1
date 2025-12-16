@@ -51,18 +51,10 @@ def get_project_dir():
 # Get library directory and add it to Python path
 library_dir = get_library_dir()
 sys.path.insert(0, str(library_dir))
-# Get project directory and process client files
+
+# Get project directory
 project_dir = get_project_dir()
 
-
-# Import get_client_files function
-from get_client_files import get_client_files
-
-
-if project_dir:
-    client_files = get_client_files(project_dir)
-    print(f"\nFound {len(client_files)} files in client project:")
-    print("=" * 60)
-    for file in client_files:
-        print(file)
-    print("=" * 60)
+# Import and execute scripts
+from arduinolib1_execute_scripts import execute_scripts
+execute_scripts(project_dir)
