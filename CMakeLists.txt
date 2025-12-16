@@ -37,6 +37,15 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Fetch ArduinoJson dependency
+include(FetchContent)
+FetchContent_Declare(
+    ArduinoJson
+    GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
+    GIT_TAG        7.x  # Use the 7.x branch (latest stable)
+)
+FetchContent_MakeAvailable(ArduinoJson)
+
 # Create header-only library (INTERFACE library)
 add_library(arduinolib1 INTERFACE)
 
@@ -50,6 +59,20 @@ target_include_directories(arduinolib1 INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
+
+# Link ArduinoJson (header-only library)
+# Try the namespaced target first, fallback to non-namespaced
+if(TARGET ArduinoJson::ArduinoJson)
+    target_link_libraries(arduinolib1 INTERFACE ArduinoJson::ArduinoJson)
+elseif(TARGET ArduinoJson)
+    target_link_libraries(arduinolib1 INTERFACE ArduinoJson)
+else()
+    # Fallback: manually add include directory if target doesn't exist
+    FetchContent_GetProperties(ArduinoJson)
+    if(ArduinoJson_SOURCE_DIR)
+        target_include_directories(arduinolib1 INTERFACE ${ArduinoJson_SOURCE_DIR})
+    endif()
+endif()
 
 # Note: For INTERFACE libraries, we don't need to add header files to target_sources
 # The include directories are sufficient for consumers to find the headers

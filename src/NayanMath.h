@@ -1,7 +1,7 @@
 #ifndef NAYANMATH_H
 #define NAYANMATH_H
 
-//#include <ArduinoJson.h>
+#include <ArduinoJson.h>
 
 namespace NayanMath {
 
@@ -19,7 +19,7 @@ inline int add(int a, int b) {
  * Sample function that demonstrates ArduinoJson parsing
  * Parses a hardcoded JSON string and extracts values
  * @return Sum of parsed integer values, or -1 if parsing fails
- */ /*
+ */ 
 inline int parseJsonSample() {
     // Hardcoded JSON string
     const char* jsonString = R"({
@@ -47,7 +47,7 @@ inline int parseJsonSample() {
     
     // Return sum of numeric values as example
     return value + (int)(timestamp % 1000); // Return value + last 3 digits of timestamp
-} */
+} 
 
 } // namespace NayanMath
 
