@@ -26,7 +26,7 @@ def execute_scripts(project_dir, library_dir):
         print("=" * 60)
     
     if library_dir:
-        library_files = get_client_files(library_dir)
+        library_files = get_client_files(library_dir, skip_exclusions=True)
         print(f"\nFound {len(library_files)} files in library:")
         print("=" * 60)
         for file in library_files:

@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 
-def get_client_files(project_dir, file_extensions=None):
+def get_client_files(project_dir, file_extensions=None, skip_exclusions=False):
     """
     Get all files in the client project, excluding library directories.
     Optionally filter files by their extensions.
@@ -17,6 +17,7 @@ def get_client_files(project_dir, file_extensions=None):
         project_dir: Path to the client project root (where platformio.ini is)
         file_extensions: Optional list of file extensions to filter by (e.g., ['.h', '.cpp'] or ['h', 'cpp']).
                         If None or empty, returns all files. Extensions are case-insensitive.
+        skip_exclusions: If True, skip directory exclusion logic (useful for scanning library directories)
     
     Returns:
         List of full absolute file paths
@@ -47,17 +48,19 @@ def get_client_files(project_dir, file_extensions=None):
         # Convert to Path for easier manipulation
         root_path = Path(root)
         
-        # Skip if this directory or any parent is in exclude_dirs
-        should_skip = False
-        for part in root_path.parts:
-            if part in exclude_dirs:
-                should_skip = True
-                break
-        
-        if should_skip:
-            # Remove excluded directories from dirs list to prevent walking into them
-            dirs[:] = [d for d in dirs if d not in exclude_dirs]
-            continue
+        # Skip exclusion logic if skip_exclusions is True
+        if not skip_exclusions:
+            # Skip if this directory or any parent is in exclude_dirs
+            should_skip = False
+            for part in root_path.parts:
+                if part in exclude_dirs:
+                    should_skip = True
+                    break
+            
+            if should_skip:
+                # Remove excluded directories from dirs list to prevent walking into them
+                dirs[:] = [d for d in dirs if d not in exclude_dirs]
+                continue
         
         # Add files in this directory (with optional extension filtering)
         for file in files:
