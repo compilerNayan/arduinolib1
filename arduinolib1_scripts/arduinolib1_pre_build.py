@@ -1,8 +1,18 @@
 # Print message immediately when script is loaded
 print("Hello cool dudes normal")
 
-# Import PlatformIO environment first
-Import("env")
+# Import PlatformIO environment first (if available)
+env = None
+try:
+    Import("env")
+except NameError:
+    # Not running in PlatformIO environment (e.g., running from CMake)
+    print("Note: Not running in PlatformIO environment - some features may be limited")
+    # Create a mock env object for CMake builds
+    class MockEnv:
+        def get(self, key, default=None):
+            return default
+    env = MockEnv()
 
 import sys
 import os
