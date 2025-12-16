@@ -39,6 +39,7 @@ def get_client_files(project_dir, file_extensions=None, skip_exclusions=False):
     exclude_dirs = {
         '.pio',           # PlatformIO build and library directory
         '.git',           # Git directory
+        'build',          # Build directory
         '.vscode',        # VS Code settings (optional, but common)
         '.idea',          # IDE settings
     }
