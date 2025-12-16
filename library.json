@@ -12,6 +12,10 @@
     "type": "git",
     "url": "https://github.com/compilerNayan/arduinolib1.git"
   },
+  "dependencies": {
+    "PioLibStuff": "https://github.com/compilerNayan/arduinolib1.git",
+    "ArduinoJson" : "https://github.com/bblanchon/ArduinoJson.git"
+  },
   "license": "MIT",
   "homepage": "",
   "frameworks": "arduino",
