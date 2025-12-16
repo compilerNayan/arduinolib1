@@ -14,6 +14,10 @@ def execute_scripts(project_dir, library_dir):
         project_dir: Path to the client project root (where platformio.ini is)
         library_dir: Path to the library directory
     """
+    # Set project_dir in globals so serializer scripts can access it
+    globals()['project_dir'] = project_dir
+    globals()['library_dir'] = library_dir
+    
     print(f"\nproject_dir: {project_dir}")
     print(f"library_dir: {library_dir}")
     
