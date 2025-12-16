@@ -12,10 +12,17 @@ if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts
         RESULT_VARIABLE PRE_BUILD_RESULT
         OUTPUT_VARIABLE PRE_BUILD_OUTPUT
         ERROR_VARIABLE PRE_BUILD_ERROR
-        ERROR_QUIET  # Don't fail if script errors (it needs PlatformIO env)
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_STRIP_TRAILING_WHITESPACE
     )
     if(PRE_BUILD_OUTPUT)
-        message(STATUS "arduinolib1 pre-build: ${PRE_BUILD_OUTPUT}")
+        message(STATUS "arduinolib1 pre-build output:\n${PRE_BUILD_OUTPUT}")
+    endif()
+    if(PRE_BUILD_ERROR)
+        message(STATUS "arduinolib1 pre-build errors (expected in non-PlatformIO environment):\n${PRE_BUILD_ERROR}")
+    endif()
+    if(PRE_BUILD_RESULT AND NOT PRE_BUILD_RESULT EQUAL "0")
+        message(STATUS "arduinolib1 pre-build script exited with code ${PRE_BUILD_RESULT} (this is expected in non-PlatformIO CMake builds)")
     endif()
 endif()
 
