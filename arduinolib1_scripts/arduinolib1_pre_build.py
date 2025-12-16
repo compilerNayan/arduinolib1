@@ -48,13 +48,16 @@ def get_project_dir():
     return project_dir
 
 
-# Get library directory and add it to Python path
-library_dir = get_library_dir()
-sys.path.insert(0, str(library_dir))
+# Get library scripts directory and add it to Python path
+library_scripts_dir = get_library_dir()
+sys.path.insert(0, str(library_scripts_dir))
+
+# Get library root directory (parent of arduinolib1_scripts)
+library_dir = library_scripts_dir.parent
 
 # Get project directory
 project_dir = get_project_dir()
 
 # Import and execute scripts
 from arduinolib1_execute_scripts import execute_scripts
-execute_scripts(project_dir)
+execute_scripts(project_dir, library_dir)
