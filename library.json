@@ -1,8 +1,8 @@
 {
-  "name": "arduinolib1",
+  "name": "PioLibStuff",
   "version": "1.0.0",
-  "description": "A simple header-only math library for ESP32",
-  "keywords": "math, esp32, header-only",
+  "description": "A simple PlatformIO library that provides an add function",
+  "keywords": "math, utility",
   "authors": [
     {
       "name": "Nayan"
@@ -13,13 +13,16 @@
     "url": "https://github.com/compilerNayan/arduinolib1.git"
   },
   "license": "MIT",
+  "homepage": "",
+  "dependencies": [
+    {
+      "name": "bblanchon/ArduinoJson",
+      "version": "^7.2.0"
+    }
+  ],
   "frameworks": "arduino",
-  "platforms": "espressif32",
+  "platforms": "*",
   "build": {
-    "srcDir": "src",
-    "extraScripts": [
-      "pre_build.py"
-    ]
+    "extraScript": "scripts/pre_build.py"
   }
 }
-
