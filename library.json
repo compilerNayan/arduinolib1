@@ -17,6 +17,6 @@
   "frameworks": "arduino",
   "platforms": "*",
   "build": {
-    "extraScript": "scripts/pre_build.py"
+    "extraScript": "arduinolib1_scripts/arduinolib1_pre_build.py"
   }
 }
