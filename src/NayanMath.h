@@ -1,6 +1,8 @@
 #ifndef NAYANMATH_H
 #define NAYANMATH_H
 
+#include <ArduinoJson.h>
+
 namespace NayanMath {
 
 /**
