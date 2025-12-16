@@ -5,10 +5,16 @@ project(arduinolib1 VERSION 1.0.0 LANGUAGES CXX)
 # This will run whenever this CMakeLists.txt is processed
 find_program(PYTHON_EXECUTABLE python3 python)
 if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py")
+    # Get the client project directory (CMAKE_SOURCE_DIR is the top-level project source directory)
+    # When this library is included via FetchContent, CMAKE_SOURCE_DIR points to the client project
+    set(CLIENT_PROJECT_DIR ${CMAKE_SOURCE_DIR})
+    
     execute_process(
         COMMAND ${PYTHON_EXECUTABLE} 
             "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        ENV
+            "CMAKE_PROJECT_DIR=${CLIENT_PROJECT_DIR}"
         RESULT_VARIABLE PRE_BUILD_RESULT
         OUTPUT_VARIABLE PRE_BUILD_OUTPUT
         ERROR_VARIABLE PRE_BUILD_ERROR
