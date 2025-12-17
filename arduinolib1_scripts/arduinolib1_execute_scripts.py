@@ -63,12 +63,12 @@ def execute_scripts(project_dir, library_dir):
             print(f"{'=' * 60}\n")
             
             try:
-    # Set environment variables so serializer script can access project_dir and library_dir
-    if project_dir:
-        os.environ['PROJECT_DIR'] = project_dir
-        os.environ['CMAKE_PROJECT_DIR'] = project_dir
-    if library_dir:
-        os.environ['LIBRARY_DIR'] = str(library_dir)
+                # Set environment variables so serializer script can access project_dir and library_dir
+                if project_dir:
+                    os.environ['PROJECT_DIR'] = project_dir
+                    os.environ['CMAKE_PROJECT_DIR'] = project_dir
+                if library_dir:
+                    os.environ['LIBRARY_DIR'] = str(library_dir)
                 
                 # Load and execute the serializer script
                 spec = importlib.util.spec_from_file_location("process_serializable_classes", serializer_script_path)
