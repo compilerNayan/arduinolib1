@@ -11,9 +11,8 @@
 #include <array>
 #include <type_traits>
 
-typedef std::string StdString;
-typedef const std::string CStdString;
-
+namespace nayan {
+namespace validation {
 
 /**
  * Utility class for DTO validation.
@@ -192,6 +191,9 @@ public:
         return true;
     }
 };
+
+} // namespace validation
+} // namespace nayan
 
 #endif // DTO_VALIDATION_UTILITY_H
 
