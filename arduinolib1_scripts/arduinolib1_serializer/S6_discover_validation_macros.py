@@ -84,18 +84,15 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
     # If search_directories is None, use get_client_files to get files from both project_dir and library_dir
     if search_directories is None:
         if get_client_files is not None:
-            # Get project_dir and library_dir from globals or environment
-            project_dir = None
-            library_dir = None
+            # Get project_dir and library_dir from environment variables (set by execute_scripts)
+            # or from module globals as fallback
+            project_dir = os.environ.get('PROJECT_DIR') or os.environ.get('CMAKE_PROJECT_DIR')
+            library_dir = os.environ.get('LIBRARY_DIR')
             
-            if 'project_dir' in globals():
+            # Fallback to globals if environment variables not set
+            if not project_dir and 'project_dir' in globals():
                 project_dir = globals()['project_dir']
-            elif 'PROJECT_DIR' in os.environ:
-                project_dir = os.environ['PROJECT_DIR']
-            elif 'CMAKE_PROJECT_DIR' in os.environ:
-                project_dir = os.environ['CMAKE_PROJECT_DIR']
-            
-            if 'library_dir' in globals():
+            if not library_dir and 'library_dir' in globals():
                 library_dir = globals()['library_dir']
             
             # Get header files from project_dir (client project)
