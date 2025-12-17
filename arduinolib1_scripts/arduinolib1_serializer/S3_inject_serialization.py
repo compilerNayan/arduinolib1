@@ -620,9 +620,9 @@ def main():
     # Generate methods code
     methods_code = generate_serialization_methods(class_name, fields, validation_fields_by_macro)
     
-    # Add ArduinoJson include if needed
+    # Add includes if needed
     if not args.dry_run:
-        add_include_if_needed(args.file_path, "<ArduinoJson.h>")
+        # Note: ArduinoJson.h is already included in NayanSerializer.h, so no need to add it here
         # Add optional include if any fields are optional
         if has_optional_fields:
             add_include_if_needed(args.file_path, "<optional>")

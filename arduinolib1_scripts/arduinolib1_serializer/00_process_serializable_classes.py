@@ -282,7 +282,7 @@ def process_all_serializable_classes(dry_run=False):
         
         # Add includes if needed
         if not dry_run:
-            S3_inject_serialization.add_include_if_needed(file_path, "<ArduinoJson.h>")
+            # Note: ArduinoJson.h is already included in NayanSerializer.h, so no need to add it here
             if optional_fields:
                 S3_inject_serialization.add_include_if_needed(file_path, "<optional>")
         
