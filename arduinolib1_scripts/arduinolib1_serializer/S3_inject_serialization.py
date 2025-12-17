@@ -253,8 +253,15 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
                     code_lines.append(f"")
                 
                 # Now validate the field itself (e.g., NotNull)
+                # Ensure function_name uses fully qualified namespace
+                qualified_function_name = function_name
+                if not qualified_function_name.startswith('nayan::'):
+                    # If function_name is like "DtoValidationUtility::ValidateNotNull" (without namespace),
+                    # prepend "nayan::validation::" to make it fully qualified
+                    qualified_function_name = f"nayan::validation::{qualified_function_name}"
+                
                 code_lines.append(f"        // Validate {macro_name} field: {field_name}")
-                code_lines.append(f"        {function_name}(doc, \"{field_name}\", validationErrors);")
+                code_lines.append(f"        {qualified_function_name}(doc, \"{field_name}\", validationErrors);")
     else:
         code_lines.append("        // No validation macros defined for this class")
     
