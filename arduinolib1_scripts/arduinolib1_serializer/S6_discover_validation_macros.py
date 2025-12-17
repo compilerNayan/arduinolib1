@@ -118,16 +118,16 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                 print(f"Warning: library_dir is None, cannot search library for validation macros")
             
             search_directories = []  # Will use file list instead
-    else:
-        # Fallback: Check if client_files is available in global scope
-        if 'client_files' in globals():
-            # Use client_files - filter to only header files
-            header_files = [f for f in globals()['client_files'] if f.endswith(('.h', '.hpp'))]
-            search_directories = []  # Will use file list instead
         else:
-            # Fallback to default directories
-            print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
-            search_directories = ['src', 'platform']
+            # Fallback: Check if client_files is available in global scope
+            if 'client_files' in globals():
+                # Use client_files - filter to only header files
+                header_files = [f for f in globals()['client_files'] if f.endswith(('.h', '.hpp'))]
+                search_directories = []  # Will use file list instead
+            else:
+                # Fallback to default directories
+                print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
+                search_directories = ['src', 'platform']
     else:
         # search_directories was provided, use directory-based search
         print(f"   Using directory-based search (search_directories provided)")
