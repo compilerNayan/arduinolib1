@@ -110,12 +110,8 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                     # Filter to only header files for consistency
                     library_header_files = [f for f in library_files if f.endswith(('.h', '.hpp'))]
                     header_files.extend(library_header_files)
-                    if library_header_files:
-                        print(f"   Found {len(library_header_files)} library header file(s) to search for validation macros")
                 except Exception as e:
                     print(f"Warning: Failed to get library files from library_dir: {e}")
-            else:
-                print(f"Warning: library_dir is None, cannot search library for validation macros")
             
             search_directories = []  # Will use file list instead
         else:
@@ -130,11 +126,10 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                 search_directories = ['src', 'platform']
     else:
         # search_directories was provided, use directory-based search
-        print(f"   Using directory-based search (search_directories provided)")
+        pass
     
     # If we have header_files list, use it directly
     if header_files:
-        print(f"   Searching {len(header_files)} header file(s) for validation macro definitions...")
         for file_path in header_files:
             if not os.path.exists(file_path):
                 continue
@@ -162,7 +157,6 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                         macro_name = match.group(1).strip()
                         function_name = match.group(2).strip()
                         validation_macros[macro_name] = function_name
-                        print(f"      Found validation macro: {macro_name} -> {function_name} in {os.path.basename(file_path)}")
                         
             except Exception as e:
                 # Skip files that can't be read
@@ -214,11 +208,6 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                         except Exception as e:
                             # Skip files that can't be read
                             continue
-    
-    if validation_macros:
-        print(f"   Total validation macros discovered: {len(validation_macros)}")
-    else:
-        print(f"   No validation macros discovered")
     
     return validation_macros
 
