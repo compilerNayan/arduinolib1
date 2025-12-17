@@ -10,6 +10,7 @@ using std::optional;
 #define NotBlank /* Validation Function -> DtoValidationUtility::ValidateNotBlank */
 
 #include <ArduinoJson.h>
+#include "StandardDefines.h"
 #include "ValidationIncludes.h"
 
 #endif // NAYANSERIALIZER_H
