@@ -5,9 +5,9 @@
 using std::optional;
 
 #define Serializable
-#define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
-#define NotEmpty /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotEmpty */
-#define NotBlank /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotBlank */
+#define NotNull /* Validation Function -> nayan::validation::ValidationUtility::ValidateNotNull */
+#define NotEmpty /* Validation Function -> nayan::validation::ValidationUtility::ValidateNotEmpty */
+#define NotBlank /* Validation Function -> nayan::validation::ValidationUtility::ValidateNotBlank */
 
 #include <ArduinoJson.h>
 #include "StandardDefines.h"

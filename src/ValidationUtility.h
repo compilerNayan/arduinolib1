@@ -19,7 +19,7 @@ namespace validation {
  * Provides static methods for validating NotNull and NotBlank constraints.
  * Uses generic document type to support different JSON/document implementations.
  */
-class DtoValidationUtility {
+class ValidationUtility {
 public:
     /**
      * Validate that a field is not null in the document.
