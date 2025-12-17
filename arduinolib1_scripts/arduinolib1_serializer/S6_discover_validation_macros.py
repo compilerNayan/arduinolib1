@@ -66,18 +66,24 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
     Discover all validation macros by scanning files for the pattern:
     #define MacroName /* Validation Function -> FunctionName */
     
+    Supports both namespaced and non-namespaced function names:
+    - #define NotNull /* Validation Function -> DtoValidationUtility::ValidateNotNull */
+    - #define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
+    
     Args:
         search_directories: List of directories to search (default: uses get_client_files for project_dir and library_dir)
         
     Returns:
         Dictionary mapping macro names to validation function names
-        Example: {'NotNull': 'DtoValidationUtility::ValidateNotNull', 'NotEmpty': 'DtoValidationUtility::ValidateNotEmpty'}
+        Example: {'NotNull': 'DtoValidationUtility::ValidateNotNull', 'NotEmpty': 'nayan::validation::DtoValidationUtility::ValidateNotEmpty'}
     """
     validation_macros = {}
     
     # Pattern to match: #define MacroName /* Validation Function -> FunctionName */
+    # FunctionName can include namespaces (e.g., nayan::validation::DtoValidationUtility::ValidateNotNull)
     # Skip commented lines (lines starting with //)
-    pattern = r'^[^/]*#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+)\s*\*/'
+    # Capture group 1: macro name, group 2: function name (with optional namespaces)
+    pattern = r'^[^/]*#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+?)\s*\*/'
     
     header_files = []
     
@@ -216,6 +222,10 @@ def extract_validation_macros_from_file(file_path: str) -> Dict[str, str]:
     """
     Extract validation macro definitions from a specific file.
     
+    Supports both namespaced and non-namespaced function names:
+    - #define NotNull /* Validation Function -> DtoValidationUtility::ValidateNotNull */
+    - #define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
+    
     Args:
         file_path: Path to the file to scan
         
@@ -227,7 +237,9 @@ def extract_validation_macros_from_file(file_path: str) -> Dict[str, str]:
     if not os.path.exists(file_path):
         return validation_macros
     
-    pattern = r'#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+)\s*\*/'
+    # Pattern to match: #define MacroName /* Validation Function -> FunctionName */
+    # FunctionName can include namespaces (e.g., nayan::validation::DtoValidationUtility::ValidateNotNull)
+    pattern = r'#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+?)\s*\*/'
     
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
