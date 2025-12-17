@@ -10,7 +10,7 @@ using std::optional;
 #define NotBlank /* Validation Function -> DtoValidationUtility::ValidateNotBlank */
 
 #include <ArduinoJson.h>
-#include "NayanSerializer.h"
+#include "DtoValidationUtility.h"
 // Suppress deprecation warning for StaticJsonDocument until migration to JsonDocument with static allocator
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
