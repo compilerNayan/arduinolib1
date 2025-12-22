@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "PioLibStuff": "https://github.com/compilerNayan/arduinolib1.git",
-    "ArduinoJson" : "https://github.com/bblanchon/ArduinoJson.git"
+    "ArduinoJson" : "https://github.com/bblanchon/ArduinoJson.git",
+    "arduinolib0": "https://github.com/compilerNayan/arduinolib0.git"
   },
   "license": "MIT",
   "homepage": "",
