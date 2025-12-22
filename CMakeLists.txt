@@ -71,9 +71,12 @@ target_include_directories(arduinolib1 INTERFACE
 )
 
 # Add arduinolib0 include directory (for StandardDefines.h)
+# Use BUILD_INTERFACE generator expression to properly handle FetchContent paths
 FetchContent_GetProperties(arduinolib0)
 if(arduinolib0_SOURCE_DIR)
-    target_include_directories(arduinolib1 INTERFACE ${arduinolib0_SOURCE_DIR}/include)
+    target_include_directories(arduinolib1 INTERFACE
+        $<BUILD_INTERFACE:${arduinolib0_SOURCE_DIR}/include>
+    )
 endif()
 
 # Link ArduinoJson (header-only library)
