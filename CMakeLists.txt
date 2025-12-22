@@ -37,14 +37,24 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Fetch ArduinoJson dependency
+# Fetch dependencies
 include(FetchContent)
+
+# Fetch ArduinoJson dependency
 FetchContent_Declare(
     ArduinoJson
     GIT_REPOSITORY https://github.com/bblanchon/ArduinoJson.git
     GIT_TAG        7.x  # Use the 7.x branch (latest stable)
 )
 FetchContent_MakeAvailable(ArduinoJson)
+
+# Fetch arduinolib0 for StandardDefines.h
+FetchContent_Declare(
+    arduinolib0
+    GIT_REPOSITORY https://github.com/compilerNayan/arduinolib0.git
+    GIT_TAG        main  # Use the main branch
+)
+FetchContent_MakeAvailable(arduinolib0)
 
 # Create header-only library (INTERFACE library)
 add_library(arduinolib1 INTERFACE)
@@ -59,6 +69,12 @@ target_include_directories(arduinolib1 INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
+
+# Add arduinolib0 include directory (for StandardDefines.h)
+FetchContent_GetProperties(arduinolib0)
+if(arduinolib0_SOURCE_DIR)
+    target_include_directories(arduinolib1 INTERFACE ${arduinolib0_SOURCE_DIR}/include)
+endif()
 
 # Link ArduinoJson (header-only library)
 # Try the namespaced target first, fallback to non-namespaced
