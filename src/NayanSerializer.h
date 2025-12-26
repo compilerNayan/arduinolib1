@@ -11,6 +11,7 @@ using std::optional;
 
 #include <ArduinoJson.h>
 #include <StandardDefines.h>
+#include "SerializationUtility.h"
 #include "ValidationIncludes.h"
 
 #endif // NAYANSERIALIZER_H
