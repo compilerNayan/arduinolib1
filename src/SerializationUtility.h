@@ -10,7 +10,7 @@
 #include <cctype>
 
 namespace nayan {
-namespace serialization {
+namespace serializer {
 
 /**
  * Generic Serialization Utility
