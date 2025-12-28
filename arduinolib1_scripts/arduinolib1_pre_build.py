@@ -76,6 +76,9 @@ library_dir = library_scripts_dir.parent
 # Get project directory
 project_dir = get_project_dir()
 
+# Get serializable macro name from environment or use default
+serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
+
 # Import and execute scripts
 from arduinolib1_execute_scripts import execute_scripts
-execute_scripts(project_dir, library_dir)
+execute_scripts(project_dir, library_dir, serializable_macro=serializable_macro)

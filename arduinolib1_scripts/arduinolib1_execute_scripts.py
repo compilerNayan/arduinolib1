@@ -9,17 +9,19 @@ import importlib.util
 from arduinolib1_core.arduinolib1_get_client_files import get_client_files
 
 
-def execute_scripts(project_dir, library_dir):
+def execute_scripts(project_dir, library_dir, serializable_macro="Serializable"):
     """
     Execute the scripts to process client files.
     
     Args:
         project_dir: Path to the client project root (where platformio.ini is)
         library_dir: Path to the library directory
+        serializable_macro: Name of the macro to search for (default: "Serializable")
     """
     # Set project_dir in globals so serializer scripts can access it
     globals()['project_dir'] = project_dir
     globals()['library_dir'] = library_dir
+    globals()['serializable_macro'] = serializable_macro
     
     print(f"\nproject_dir: {project_dir}")
     print(f"library_dir: {library_dir}")
@@ -69,6 +71,8 @@ def execute_scripts(project_dir, library_dir):
                     os.environ['CMAKE_PROJECT_DIR'] = project_dir
                 if library_dir:
                     os.environ['LIBRARY_DIR'] = str(library_dir)
+                # Set serializable macro name
+                os.environ['SERIALIZABLE_MACRO'] = serializable_macro
                 
                 # Load and execute the serializer script
                 spec = importlib.util.spec_from_file_location("process_serializable_classes", serializer_script_path)
@@ -81,6 +85,7 @@ def execute_scripts(project_dir, library_dir):
                 # This ensures the serializer script can access project_dir and library_dir
                 serializer_module.__dict__['project_dir'] = project_dir
                 serializer_module.__dict__['library_dir'] = library_dir
+                serializer_module.__dict__['serializable_macro'] = serializable_macro
                 
                 # Execute the module (this will run the top-level code)
                 spec.loader.exec_module(serializer_module)

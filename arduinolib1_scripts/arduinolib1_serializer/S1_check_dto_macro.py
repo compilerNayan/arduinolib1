@@ -13,12 +13,13 @@ from typing import Optional, Dict
 print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
 
 
-def check_dto_macro(file_path: str) -> Optional[Dict[str, any]]:
+def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") -> Optional[Dict[str, any]]:
     """
     Check if a C++ file contains a class with the Serializable macro above it.
     
     Args:
         file_path: Path to the C++ file
+        serializable_macro: Name of the macro to search for (default: "Serializable")
         
     Returns:
         Dictionary with 'class_name', 'has_dto', 'line_number' if found, None otherwise
@@ -33,8 +34,9 @@ def check_dto_macro(file_path: str) -> Optional[Dict[str, any]]:
         print(f"Error reading file '{file_path}': {e}")
         return None
     
-    # Pattern to match Serializable macro (standalone line)
-    serializable_pattern = r'^Serializable\s*$'
+    # Pattern to match Serializable macro (standalone line) - escape the macro name for regex
+    escaped_macro = re.escape(serializable_macro)
+    serializable_pattern = rf'^{escaped_macro}\s*$'
     
     # Pattern to match class declarations
     class_pattern = r'class\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:[:{])'
@@ -70,7 +72,9 @@ def check_dto_macro(file_path: str) -> Optional[Dict[str, any]]:
                         }
                     
                     # Stop if we hit something that's not a macro or class
-                    if next_line and not (next_line.startswith(('Serializable', 'COMPONENT', 'SCOPE', 'VALIDATE', 'Dto')) or 
+                    # Check if it starts with the serializable macro or other known macros
+                    known_macros = (serializable_macro, 'COMPONENT', 'SCOPE', 'VALIDATE', 'Dto')
+                    if next_line and not (next_line.startswith(known_macros) or 
                                          re.match(r'^[A-Z][A-Za-z0-9_]*\s*(?:\(|$)', next_line)):
                         break
     
@@ -88,10 +92,15 @@ def main():
         "file_path",
         help="Path to the C++ file to check"
     )
+    parser.add_argument(
+        "--macro",
+        default="Serializable",
+        help="Name of the macro to search for (default: Serializable)"
+    )
     
     args = parser.parse_args()
     
-    result = check_dto_macro(args.file_path)
+    result = check_dto_macro(args.file_path, args.macro)
     
     if result and result.get('has_dto'):
         print(f"✅ Class '{result['class_name']}' has Serializable macro")

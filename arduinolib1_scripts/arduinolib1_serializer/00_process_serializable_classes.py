@@ -178,16 +178,28 @@ S3_inject_serialization = importlib.util.module_from_spec(spec_s3)
 spec_s3.loader.exec_module(S3_inject_serialization)
 
 
-def process_all_serializable_classes(dry_run=False):
+def process_all_serializable_classes(dry_run=False, serializable_macro=None):
     """
     Process all client files that contain classes with Serializable macro.
     
     Args:
         dry_run: If True, show what would be processed without modifying files
+        serializable_macro: Name of the macro to search for (default: "Serializable" or from environment)
         
     Returns:
         Number of files processed
     """
+    # Get serializable_macro from parameter, globals, or environment
+    if serializable_macro is None:
+        if 'serializable_macro' in globals():
+            serializable_macro = globals()['serializable_macro']
+        elif 'SERIALIZABLE_MACRO' in os.environ:
+            serializable_macro = os.environ['SERIALIZABLE_MACRO']
+        else:
+            serializable_macro = "Serializable"
+    
+    print(f"Using serializable macro: {serializable_macro}")
+    
     # Get project_dir from globals or environment
     project_dir = None
     if 'project_dir' in globals():
@@ -226,7 +238,7 @@ def process_all_serializable_classes(dry_run=False):
             continue
         
         # Check if file has Serializable macro
-        dto_info = S1_check_dto_macro.check_dto_macro(file_path)
+        dto_info = S1_check_dto_macro.check_dto_macro(file_path, serializable_macro)
         
         if not dto_info or not dto_info.get('has_dto'):
             continue
@@ -292,7 +304,7 @@ def process_all_serializable_classes(dry_run=False):
         if success:
             # Comment out Serializable macro
             if not dry_run:
-                S3_inject_serialization.comment_dto_macro(file_path, dry_run=False)
+                S3_inject_serialization.comment_dto_macro(file_path, dry_run=False, serializable_macro=serializable_macro)
             processed_count += 1
             print(f"   ✅ Successfully processed {class_name}")
         else:
@@ -303,7 +315,14 @@ def process_all_serializable_classes(dry_run=False):
 
 def main():
     """Main function to process all Serializable classes."""
-    processed_count = process_all_serializable_classes(dry_run=False)
+    # Get serializable_macro from globals or environment
+    serializable_macro = None
+    if 'serializable_macro' in globals():
+        serializable_macro = globals()['serializable_macro']
+    elif 'SERIALIZABLE_MACRO' in os.environ:
+        serializable_macro = os.environ['SERIALIZABLE_MACRO']
+    
+    processed_count = process_all_serializable_classes(dry_run=False, serializable_macro=serializable_macro)
     
     if processed_count > 0:
         print(f"\n✅ Successfully processed {processed_count} file(s) with Serializable classes")

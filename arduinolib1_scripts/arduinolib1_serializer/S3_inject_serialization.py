@@ -403,13 +403,14 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     return "\n".join(code_lines)
 
 
-def comment_dto_macro(file_path: str, dry_run: bool = False) -> bool:
+def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
     """
     Comment out the Serializable macro in a C++ file.
     
     Args:
         file_path: Path to the C++ file to modify
         dry_run: If True, only show what would be changed without making changes
+        serializable_macro: Name of the macro to comment out (default: "Serializable")
         
     Returns:
         True if file was modified successfully or would be modified, False otherwise
@@ -431,7 +432,7 @@ def comment_dto_macro(file_path: str, dry_run: bool = False) -> bool:
                 continue
             
             # Check if line contains standalone Serializable macro
-            if stripped_line == 'Serializable':
+            if stripped_line == serializable_macro:
                 # Add comment prefix
                 if not dry_run:
                     modified_lines.append('// ' + line)
@@ -447,9 +448,9 @@ def comment_dto_macro(file_path: str, dry_run: bool = False) -> bool:
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            print(f"✓ Commented Serializable macro in: {file_path}")
+            print(f"✓ Commented {serializable_macro} macro in: {file_path}")
         elif modified and dry_run:
-            print(f"  Would comment Serializable macro in: {file_path}")
+            print(f"  Would comment {serializable_macro} macro in: {file_path}")
         elif not modified:
             # No macro found (this is fine, might already be commented)
             pass
@@ -642,11 +643,13 @@ def main():
         return 1
     
     # Comment out Serializable macro after successful injection
+    # Get serializable_macro from environment or use default
+    serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
     if not args.dry_run:
-        print(f"  Commenting Serializable macro in: {args.file_path}")
+        print(f"  Commenting {serializable_macro} macro in: {args.file_path}")
     else:
-        print(f"  Would comment Serializable macro in: {args.file_path}")
-    comment_dto_macro(args.file_path, dry_run=args.dry_run)
+        print(f"  Would comment {serializable_macro} macro in: {args.file_path}")
+    comment_dto_macro(args.file_path, dry_run=args.dry_run, serializable_macro=serializable_macro)
     
     if args.dry_run:
         print("\n🔍 DRY RUN MODE - Generated methods code:")
