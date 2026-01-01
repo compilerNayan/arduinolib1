@@ -52,7 +52,7 @@ FetchContent_MakeAvailable(ArduinoJson)
 FetchContent_Declare(
     arduinolib0
     GIT_REPOSITORY https://github.com/compilerNayan/arduinolib0.git
-    GIT_TAG        main  # Use the main branch
+    GIT_TAG        dev  # Use the main branch
 )
 FetchContent_MakeAvailable(arduinolib0)
 
