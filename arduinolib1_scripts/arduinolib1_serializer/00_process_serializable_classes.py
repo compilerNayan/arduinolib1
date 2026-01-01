@@ -302,9 +302,12 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         success = S3_inject_serialization.inject_methods_into_class(file_path, class_name, methods_code, dry_run=dry_run)
         
         if success:
-            # Comment out Serializable macro
+            # Convert //@Serializable or //@Entity to /*@Serializable*/ or /*@Entity*/ after successful injection
+            # Use the actual annotation name that was found in the file
+            found_annotation = dto_info.get('annotation_name', serializable_macro)
             if not dry_run:
-                S3_inject_serialization.comment_dto_macro(file_path, dry_run=False, serializable_macro=serializable_macro)
+                # Convert the annotation that was actually found
+                S3_inject_serialization.convert_annotation_to_processed(file_path, dry_run=False, annotation_name=found_annotation)
             processed_count += 1
             print(f"   ✅ Successfully processed {class_name}")
         else:

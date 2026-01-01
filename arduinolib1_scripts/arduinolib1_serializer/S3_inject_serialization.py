@@ -407,11 +407,13 @@ def convert_annotation_to_processed(file_path: str, dry_run: bool = False, annot
     """
     Convert //@AnnotationName to /*@AnnotationName*/ in a C++ file.
     This marks the annotation as processed so it won't be processed again.
+    Checks for both //@Serializable and //@Entity annotations and converts whichever is found.
     
     Args:
         file_path: Path to the C++ file to modify
         dry_run: If True, only show what would be changed without making changes
         annotation_name: Name of the annotation to convert (default: "Serializable")
+                        The function will check for both this annotation AND "Entity"
         
     Returns:
         True if file was modified successfully or would be modified, False otherwise
@@ -422,42 +424,59 @@ def convert_annotation_to_processed(file_path: str, dry_run: bool = False, annot
         
         modified = False
         modified_lines = []
+        converted_annotations = []
         
+        # Check for both //@Serializable and //@Entity annotations
         # Pattern to match //@AnnotationName (case-sensitive)
-        annotation_pattern = rf'^(\s*)//@({re.escape(annotation_name)})\s*$'
+        annotation_patterns = [
+            rf'^(\s*)//@({re.escape(annotation_name)})\s*$',  # Primary annotation
+            r'^(\s*)//@(Serializable)\s*$',  # Always check for Serializable
+            r'^(\s*)//@(Entity)\s*$'  # Always check for Entity
+        ]
         
         for i, line in enumerate(lines):
             original_line = line
             stripped_line = line.strip()
             
             # Skip already processed annotations (/*@AnnotationName*/)
-            if re.match(rf'^\s*/\*@{re.escape(annotation_name)}\*/\s*$', stripped_line):
+            if re.match(rf'^\s*/\*@{re.escape(annotation_name)}\*/\s*$', stripped_line) or \
+               re.match(r'^\s*/\*@Serializable\*/\s*$', stripped_line) or \
+               re.match(r'^\s*/\*@Entity\*/\s*$', stripped_line):
                 modified_lines.append(line)
                 continue
             
-            # Check if line contains //@AnnotationName annotation
-            match = re.match(annotation_pattern, line)
-            if match:
-                indent = match.group(1)
-                annotation = match.group(2)
-                # Convert to /*@AnnotationName*/
-                if not dry_run:
-                    modified_lines.append(f'{indent}/*@{annotation}*/\n')
-                else:
-                    modified_lines.append(line)  # Keep original for dry run display
-                modified = True
-                if dry_run:
-                    print(f"    Would convert: {stripped_line} -> /*@{annotation}*/")
-            else:
+            # Check if line contains any of the annotations
+            annotation_found = None
+            for pattern in annotation_patterns:
+                match = re.match(pattern, line)
+                if match:
+                    indent = match.group(1)
+                    annotation = match.group(2)
+                    # Convert to /*@AnnotationName*/
+                    if not dry_run:
+                        modified_lines.append(f'{indent}/*@{annotation}*/\n')
+                    else:
+                        modified_lines.append(line)  # Keep original for dry run display
+                    modified = True
+                    converted_annotations.append(annotation)
+                    if dry_run:
+                        print(f"    Would convert: {stripped_line} -> /*@{annotation}*/")
+                    break
+            
+            if annotation_found is None:
                 modified_lines.append(line)
         
-        # Write back to file if modifications were made and not dry run
+        # Write back to file if modifications were made and not dry_run
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            print(f"✓ Converted //@{annotation_name} to /*@{annotation_name}*/ in: {file_path}")
+            if converted_annotations:
+                annotations_str = ", ".join(f"//@{ann}" for ann in set(converted_annotations))
+                print(f"✓ Converted {annotations_str} to processed format in: {file_path}")
         elif modified and dry_run:
-            print(f"  Would convert //@{annotation_name} to /*@{annotation_name}*/ in: {file_path}")
+            if converted_annotations:
+                annotations_str = ", ".join(f"//@{ann}" for ann in set(converted_annotations))
+                print(f"  Would convert {annotations_str} to processed format in: {file_path}")
         elif not modified:
             # No annotation found (this is fine, might already be processed)
             pass
