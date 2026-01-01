@@ -403,14 +403,15 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     return "\n".join(code_lines)
 
 
-def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
+def convert_annotation_to_processed(file_path: str, dry_run: bool = False, annotation_name: str = "Serializable") -> bool:
     """
-    Comment out the Serializable macro in a C++ file.
+    Convert //@AnnotationName to /*@AnnotationName*/ in a C++ file.
+    This marks the annotation as processed so it won't be processed again.
     
     Args:
         file_path: Path to the C++ file to modify
         dry_run: If True, only show what would be changed without making changes
-        serializable_macro: Name of the macro to comment out (default: "Serializable")
+        annotation_name: Name of the annotation to convert (default: "Serializable")
         
     Returns:
         True if file was modified successfully or would be modified, False otherwise
@@ -422,25 +423,31 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
         modified = False
         modified_lines = []
         
+        # Pattern to match //@AnnotationName (case-sensitive)
+        annotation_pattern = rf'^(\s*)//@({re.escape(annotation_name)})\s*$'
+        
         for i, line in enumerate(lines):
             original_line = line
             stripped_line = line.strip()
             
-            # Skip already commented lines
-            if stripped_line.startswith('//') or stripped_line.startswith('/*') or stripped_line.startswith('*'):
+            # Skip already processed annotations (/*@AnnotationName*/)
+            if re.match(rf'^\s*/\*@{re.escape(annotation_name)}\*/\s*$', stripped_line):
                 modified_lines.append(line)
                 continue
             
-            # Check if line contains standalone Serializable macro
-            if stripped_line == serializable_macro:
-                # Add comment prefix
+            # Check if line contains //@AnnotationName annotation
+            match = re.match(annotation_pattern, line)
+            if match:
+                indent = match.group(1)
+                annotation = match.group(2)
+                # Convert to /*@AnnotationName*/
                 if not dry_run:
-                    modified_lines.append('// ' + line)
+                    modified_lines.append(f'{indent}/*@{annotation}*/\n')
                 else:
                     modified_lines.append(line)  # Keep original for dry run display
                 modified = True
                 if dry_run:
-                    print(f"    Would comment: {stripped_line}")
+                    print(f"    Would convert: {stripped_line} -> /*@{annotation}*/")
             else:
                 modified_lines.append(line)
         
@@ -448,11 +455,11 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            print(f"✓ Commented {serializable_macro} macro in: {file_path}")
+            print(f"✓ Converted //@{annotation_name} to /*@{annotation_name}*/ in: {file_path}")
         elif modified and dry_run:
-            print(f"  Would comment {serializable_macro} macro in: {file_path}")
+            print(f"  Would convert //@{annotation_name} to /*@{annotation_name}*/ in: {file_path}")
         elif not modified:
-            # No macro found (this is fine, might already be commented)
+            # No annotation found (this is fine, might already be processed)
             pass
         
         return True
@@ -570,11 +577,11 @@ def main():
     dto_info = S1_check_dto_macro.check_dto_macro(args.file_path)
     
     if not dto_info or not dto_info.get('has_dto'):
-        print("❌ Error: Class does not have Serializable macro")
+        print("❌ Error: Class does not have //@Serializable annotation")
         return 1
     
     class_name = dto_info['class_name']
-    print(f"✅ Found Serializable class: {class_name}")
+    print(f"✅ Found //@Serializable class: {class_name}")
     
     # Extract fields (all access levels: public, private, protected, or no specifier)
     fields = S2_extract_dto_fields.extract_all_fields(args.file_path, class_name)
@@ -642,14 +649,14 @@ def main():
     if not success:
         return 1
     
-    # Comment out Serializable macro after successful injection
-    # Get serializable_macro from environment or use default
-    serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
+    # Convert //@Serializable to /*@Serializable*/ after successful injection
+    # Get annotation name from environment or use default
+    annotation_name = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
     if not args.dry_run:
-        print(f"  Commenting {serializable_macro} macro in: {args.file_path}")
+        print(f"  Converting //@{annotation_name} to /*@{annotation_name}*/ in: {args.file_path}")
     else:
-        print(f"  Would comment {serializable_macro} macro in: {args.file_path}")
-    comment_dto_macro(args.file_path, dry_run=args.dry_run, serializable_macro=serializable_macro)
+        print(f"  Would convert //@{annotation_name} to /*@{annotation_name}*/ in: {args.file_path}")
+    convert_annotation_to_processed(args.file_path, dry_run=args.dry_run, annotation_name=annotation_name)
     
     if args.dry_run:
         print("\n🔍 DRY RUN MODE - Generated methods code:")
@@ -667,7 +674,7 @@ __all__ = [
     'is_optional_type',
     'extract_inner_type_from_optional',
     'generate_serialization_methods',
-    'comment_dto_macro',
+    'convert_annotation_to_processed',
     'inject_methods_into_class',
     'main'
 ]

@@ -63,21 +63,31 @@ else:
 
 def find_validation_macro_definitions(search_directories: List[str] = None) -> Dict[str, str]:
     """
-    Discover all validation macros by scanning files for the pattern:
-    #define MacroName /* Validation Function -> FunctionName */
-    
-    Supports both namespaced and non-namespaced function names:
-    - #define NotNull /* Validation Function -> DtoValidationUtility::ValidateNotNull */
-    - #define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
+    Discover all validation annotations.
+    Since we're using //@AnnotationName format instead of #define macros,
+    we return the known validation annotations with their function mappings.
     
     Args:
-        search_directories: List of directories to search (default: uses get_client_files for project_dir and library_dir)
+        search_directories: List of directories to search (ignored, kept for compatibility)
         
     Returns:
-        Dictionary mapping macro names to validation function names
-        Example: {'NotNull': 'DtoValidationUtility::ValidateNotNull', 'NotEmpty': 'nayan::validation::DtoValidationUtility::ValidateNotEmpty'}
+        Dictionary mapping annotation names to validation function names
+        Example: {'NotNull': 'nayan::validation::ValidationUtility::ValidateNotNull', ...}
     """
-    validation_macros = {}
+    # Known validation annotations and their corresponding validation functions
+    # These match the ValidationUtility class methods
+    validation_macros = {
+        'NotNull': 'nayan::validation::ValidationUtility::ValidateNotNull',
+        'NotBlank': 'nayan::validation::ValidationUtility::ValidateNotBlank',
+        'NotEmpty': 'nayan::validation::ValidationUtility::ValidateNotEmpty'
+    }
+    
+    # Return early with hardcoded annotations
+    return validation_macros
+    
+    # The code below is kept for reference but won't execute due to early return above
+    # In the future, we could scan source files for //@NotNull, //@NotBlank, //@NotEmpty usage
+    # to discover additional custom validation annotations
     
     # Pattern to match: #define MacroName /* Validation Function -> FunctionName */
     # FunctionName can include namespaces (e.g., nayan::validation::DtoValidationUtility::ValidateNotNull)
@@ -220,59 +230,17 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
 
 def extract_validation_macros_from_file(file_path: str) -> Dict[str, str]:
     """
-    Extract validation macro definitions from a specific file.
-    
-    Supports both namespaced and non-namespaced function names:
-    - #define NotNull /* Validation Function -> DtoValidationUtility::ValidateNotNull */
-    - #define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
+    Extract validation annotation definitions from a specific file.
+    Since we're using //@AnnotationName format, this returns the known annotations.
     
     Args:
-        file_path: Path to the file to scan
+        file_path: Path to the file to scan (ignored, kept for compatibility)
         
     Returns:
-        Dictionary mapping macro names to validation function names
+        Dictionary mapping annotation names to validation function names
     """
-    validation_macros = {}
-    
-    if not os.path.exists(file_path):
-        return validation_macros
-    
-    # Pattern to match: #define MacroName /* Validation Function -> FunctionName */
-    # FunctionName can include namespaces (e.g., nayan::validation::DtoValidationUtility::ValidateNotNull)
-    pattern = r'#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+?)\s*\*/'
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            
-        # Check each line (skip commented lines)
-        for line in lines:
-            # Skip lines that are commented out (single-line comments)
-            stripped = line.strip()
-            if stripped.startswith('//'):
-                continue
-            
-            # Skip lines that have // before the #define (inline comments)
-            # Check if there's a // before any potential #define
-            if '//' in line:
-                # Find position of // and #define
-                comment_pos = line.find('//')
-                define_pos = line.find('#define')
-                # If // comes before #define, skip this line
-                if define_pos != -1 and comment_pos != -1 and comment_pos < define_pos:
-                    continue
-            
-            # Find matches in non-commented lines
-            match = re.search(pattern, line, re.IGNORECASE)
-            if match:
-                macro_name = match.group(1).strip()
-                function_name = match.group(2).strip()
-                validation_macros[macro_name] = function_name
-            
-    except Exception as e:
-        pass
-    
-    return validation_macros
+    # Return the same hardcoded validation annotations
+    return find_validation_macro_definitions()
 
 
 def main():
@@ -280,7 +248,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Discover validation macros from source files"
+        description="Discover validation annotations (returns known annotations)"
     )
     parser.add_argument(
         "--search-dirs",
@@ -300,7 +268,7 @@ def main():
         search_dirs = args.search_dirs if args.search_dirs else None
         macros = find_validation_macro_definitions(search_dirs)
     
-    print(f"Found {len(macros)} validation macro(s):")
+    print(f"Found {len(macros)} validation annotation(s):")
     for macro_name, function_name in sorted(macros.items()):
         print(f"  {macro_name} -> {function_name}")
     

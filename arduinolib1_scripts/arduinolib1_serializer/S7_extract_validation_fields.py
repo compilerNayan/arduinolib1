@@ -107,14 +107,16 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
     start_line, end_line = boundaries
     class_lines = lines[start_line - 1:end_line]
     
-    # Build pattern for all validation macros
+    # Build pattern for all validation annotations
     macro_names = list(validation_macros.keys())
     if not macro_names:
         return {}
     
-    # Create pattern to match any validation macro
+    # Create pattern to match any validation annotation //@AnnotationName (case-sensitive)
+    # Also check for already processed annotations /*@AnnotationName*/ (should be ignored)
     macro_pattern = '|'.join(re.escape(macro) for macro in macro_names)
-    validation_pattern = rf'^\s*({macro_pattern})\s*$'
+    validation_annotation_pattern = rf'^\s*//@({macro_pattern})\s*$'
+    validation_processed_pattern = rf'^\s*/\*@({macro_pattern})\*/\s*$'
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
@@ -130,8 +132,13 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
         line = class_lines[i]
         stripped = line.strip()
         
-        # Skip comments
-        if stripped.startswith('//') or stripped.startswith('/*'):
+        # Skip already processed annotations (/*@AnnotationName*/)
+        if re.search(validation_processed_pattern, stripped):
+            i += 1
+            continue
+        
+        # Skip other comment types (but not //@ annotations)
+        if stripped.startswith('/*') and not stripped.startswith('//@'):
             i += 1
             continue
         
@@ -147,8 +154,8 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
             i += 1
             continue
         
-        # Check for validation macro
-        validation_match = re.search(validation_pattern, stripped)
+        # Check for validation annotation //@AnnotationName
+        validation_match = re.search(validation_annotation_pattern, stripped)
         if validation_match:
             macro_name = validation_match.group(1)
             validation_info = get_validation_function_info(validation_macros, macro_name)
@@ -159,16 +166,20 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
                 for j in range(i + 1, min(i + 11, len(class_lines))):
                     next_line = class_lines[j].strip()
                     
-                    # Skip comments
-                    if next_line.startswith('//') or next_line.startswith('/*'):
+                    # Skip already processed annotations
+                    if re.search(validation_processed_pattern, next_line):
+                        continue
+                    
+                    # Skip other comment types (but not //@ annotations)
+                    if next_line.startswith('/*') and not next_line.startswith('//@'):
                         continue
                     
                     # Skip empty lines
                     if not next_line:
                         continue
                     
-                    # Skip other validation macros (can appear between validation macro and field)
-                    if re.search(validation_pattern, next_line):
+                    # Skip other validation annotations (can appear between validation annotation and field)
+                    if re.search(validation_annotation_pattern, next_line):
                         continue
                     
                     # Check for field declaration
@@ -198,9 +209,10 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
                             found_field = True
                         break
                     
-                    # Stop if we hit another macro or access specifier
+                    # Stop if we hit another annotation or access specifier
                     if next_line and (re.search(access_pattern, next_line, re.IGNORECASE) or 
-                                     re.search(r'^\s*(Dto|Serializable|COMPONENT|SCOPE|VALIDATE)\s*$', next_line)):
+                                     re.search(r'^\s*//@', next_line) or
+                                     re.search(r'^\s*/\*@', next_line)):
                         break
             
             i += 1

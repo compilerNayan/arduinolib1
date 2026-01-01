@@ -57,7 +57,7 @@ def is_string_type(field_type: str) -> bool:
 
 def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, str]]:
     """
-    Extract all member variables that have the NotBlank macro above them.
+    Extract all member variables that have the //@NotBlank annotation above them.
     Only includes fields that are string types (NotBlank only applies to strings).
     
     Args:
@@ -88,8 +88,11 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
-    notblank_pattern = r'^\s*NotBlank\s*$'
-    notnull_pattern = r'^\s*NotNull\s*$'
+    # Pattern to match //@NotBlank annotation (case-sensitive)
+    # Also check for /*@NotBlank*/ (already processed, should be ignored)
+    notblank_annotation_pattern = r'^\s*//@NotBlank\s*$'
+    notblank_processed_pattern = r'^\s*/\*@NotBlank\*/\s*$'
+    notnull_annotation_pattern = r'^\s*//@NotNull\s*$'
     # Field pattern: matches "int a;", "optional<StdString> x;" with optional access specifier
     field_pattern = r'^\s*(?:Public|Private|Protected)?\s*([A-Za-z_][A-Za-z0-9_<>*&,\s]*?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[;=]'
     
@@ -98,8 +101,13 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
         line = class_lines[i]
         stripped = line.strip()
         
-        # Skip comments
-        if stripped.startswith('//') or stripped.startswith('/*'):
+        # Skip already processed annotations (/*@AnnotationName*/)
+        if re.search(notblank_processed_pattern, stripped):
+            i += 1
+            continue
+        
+        # Skip other comment types (but not //@ annotations)
+        if stripped.startswith('/*') and not stripped.startswith('//@'):
             i += 1
             continue
         
@@ -115,24 +123,28 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
             i += 1
             continue
         
-        # Check for NotBlank macro
-        notblank_match = re.search(notblank_pattern, stripped)
+        # Check for //@NotBlank annotation
+        notblank_match = re.search(notblank_annotation_pattern, stripped)
         if notblank_match:
             # Look ahead for field declaration (within next 10 lines, may have NotNull in between)
             found_field = False
             for j in range(i + 1, min(i + 11, len(class_lines))):
                 next_line = class_lines[j].strip()
                 
-                # Skip comments
-                if next_line.startswith('//') or next_line.startswith('/*'):
+                # Skip already processed annotations
+                if re.search(notblank_processed_pattern, next_line):
+                    continue
+                
+                # Skip other comment types (but not //@ annotations)
+                if next_line.startswith('/*') and not next_line.startswith('//@'):
                     continue
                 
                 # Skip empty lines
                 if not next_line:
                     continue
                 
-                # Skip NotNull macro (can appear between NotBlank and field)
-                if re.search(notnull_pattern, next_line):
+                # Skip //@NotNull annotation (can appear between NotBlank and field)
+                if re.search(notnull_annotation_pattern, next_line):
                     continue
                 
                 # Check for field declaration
@@ -152,9 +164,10 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
                         found_field = True
                     break
                 
-                # Stop if we hit another macro or access specifier
+                # Stop if we hit another annotation or access specifier
                 if next_line and (re.search(access_pattern, next_line, re.IGNORECASE) or 
-                                 re.search(r'^\s*(NotNull|NotBlank|Dto|Serializable|COMPONENT|SCOPE|VALIDATE)\s*$', next_line)):
+                                 re.search(r'^\s*//@', next_line) or
+                                 re.search(r'^\s*/\*@', next_line)):
                     break
             
             i += 1
@@ -168,7 +181,7 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
 def main():
     """Main function to handle command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Extract fields with NotBlank macro from a class (string types only)"
+        description="Extract fields with //@NotBlank annotation from a class (string types only)"
     )
     parser.add_argument(
         "file_path",

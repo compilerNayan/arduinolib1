@@ -4,10 +4,10 @@
 #include <optional>
 using std::optional;
 
-#define Serializable
-#define NotNull /* Validation Function -> nayan::validation::ValidationUtility::ValidateNotNull */
-#define NotEmpty /* Validation Function -> nayan::validation::ValidationUtility::ValidateNotEmpty */
-#define NotBlank /* Validation Function -> nayan::validation::ValidationUtility::ValidateNotBlank */
+// These annotations are used by the preprocessing scripts
+// They are written as //@AnnotationName in source files
+// After processing, they become /*@AnnotationName*/ to be ignored
+// Examples: //@Serializable, //@NotNull, //@NotBlank, //@NotEmpty
 
 #include <ArduinoJson.h>
 #include <StandardDefines.h>
