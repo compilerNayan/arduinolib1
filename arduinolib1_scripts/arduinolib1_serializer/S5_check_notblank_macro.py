@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 from typing import List, Dict, Optional
 
-debug_print("Executing NayanSerializer/scripts/serializer/S5_check_notblank_macro.py")
+print("Executing NayanSerializer/scripts/serializer/S5_check_notblank_macro.py")
 
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +22,8 @@ sys.path.insert(0, script_dir)
 try:
     import S2_extract_dto_fields
 except ImportError as e:
-    debug_print(f"Error: Could not import required modules: {e}")
-    debug_print("Make sure S2_extract_dto_fields.py is in the same directory.")
+    print(f"Error: Could not import required modules: {e}")
+    print("Make sure S2_extract_dto_fields.py is in the same directory.")
     sys.exit(1)
 
 
@@ -72,7 +72,7 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        debug_print(f"Error reading file: {e}")
+        print(f"Error reading file: {e}")
         return []
     
     # Find class boundaries
@@ -193,24 +193,15 @@ def main():
     
     fields = extract_notblank_fields(args.file_path, args.class_name)
     
-    debug_print(f"@NotBlank fields found: {len(fields)}")
+    print(f"@NotBlank fields found: {len(fields)}")
     for field in fields:
-        debug_print(f"  {field['type']} {field['name']} (access: {field['access']})")
+        print(f"  {field['type']} {field['name']} (access: {field['access']})")
     
     return 0
 
 
 # Export functions for other scripts to import
-__all__
-
-# Import debug utility
-try:
-    from debug_utils import debug_print
-except ImportError:
-    # Fallback if debug_utils not found - create a no-op function
-    def debug_print(*args, **kwargs):
-        pass
- = [
+__all__ = [
     'extract_notblank_fields',
     'is_string_type',
     'main'

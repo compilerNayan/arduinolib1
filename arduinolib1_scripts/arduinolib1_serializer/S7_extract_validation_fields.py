@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional, Set
 
-debug_print("Executing NayanSerializer/scripts/serializer/S7_extract_validation_fields.py")
+print("Executing NayanSerializer/scripts/serializer/S7_extract_validation_fields.py")
 
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +22,8 @@ try:
     import S2_extract_dto_fields
     import S6_discover_validation_macros
 except ImportError as e:
-    debug_print(f"Error: Could not import required modules: {e}")
-    debug_print("Make sure S2_extract_dto_fields.py and S6_discover_validation_macros.py are in the same directory.")
+    print(f"Error: Could not import required modules: {e}")
+    print("Make sure S2_extract_dto_fields.py and S6_discover_validation_macros.py are in the same directory.")
     sys.exit(1)
 
 
@@ -96,7 +96,7 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        debug_print(f"Error reading file: {e}")
+        print(f"Error reading file: {e}")
         return {}
     
     # Find class boundaries
@@ -261,32 +261,23 @@ def main():
     validation_macros = S6_discover_validation_macros.find_validation_macro_definitions(args.search_dirs)
     
     if not validation_macros:
-        debug_print("No validation macros found")
+        print("No validation macros found")
         return 1
     
     # Extract fields
     fields_by_macro = extract_validation_fields(args.file_path, args.class_name, validation_macros)
     
-    debug_print(f"Validation fields found: {sum(len(v) for v in fields_by_macro.values())}")
+    print(f"Validation fields found: {sum(len(v) for v in fields_by_macro.values())}")
     for macro_name, fields in fields_by_macro.items():
-        debug_print(f"  {macro_name} ({len(fields)} field(s)):")
+        print(f"  {macro_name} ({len(fields)} field(s)):")
         for field in fields:
-            debug_print(f"    {field['type']} {field['name']} (access: {field['access']}, function: {field['function_name']})")
+            print(f"    {field['type']} {field['name']} (access: {field['access']}, function: {field['function_name']})")
     
     return 0
 
 
 # Export functions for other scripts to import
-__all__
-
-# Import debug utility
-try:
-    from debug_utils import debug_print
-except ImportError:
-    # Fallback if debug_utils not found - create a no-op function
-    def debug_print(*args, **kwargs):
-        pass
- = [
+__all__ = [
     'extract_validation_fields',
     'get_validation_function_info',
     'is_string_type',

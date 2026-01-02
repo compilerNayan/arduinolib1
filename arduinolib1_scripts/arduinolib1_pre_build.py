@@ -1,5 +1,5 @@
 # Print message immediately when script is loaded
-debug_print("Hello cool dudes normal")
+print("Hello cool dudes normal")
 
 # Import PlatformIO environment first (if available)
 env = None
@@ -7,7 +7,7 @@ try:
     Import("env")
 except NameError:
     # Not running in PlatformIO environment (e.g., running from CMake)
-    debug_print("Note: Not running in PlatformIO environment - some features may be limited")
+    print("Note: Not running in PlatformIO environment - some features may be limited")
     # Create a mock env object for CMake builds
     class MockEnv:
         def get(self, key, default=None):
@@ -34,7 +34,7 @@ def get_library_dir():
     for _ in range(10):  # Search up to 10 levels
         potential = current / "arduinolib1_scripts"
         if potential.exists() and potential.is_dir():
-            debug_print(f"✓ Found library path by searching up directory tree: {potential}")
+            print(f"✓ Found library path by searching up directory tree: {potential}")
             return potential
         parent = current.parent
         if parent == current:  # Reached filesystem root
@@ -60,9 +60,9 @@ def get_project_dir():
         project_dir = os.environ.get("CMAKE_PROJECT_DIR", None)
     
     if project_dir:
-        debug_print(f"\nClient project directory: {project_dir}")
+        print(f"\nClient project directory: {project_dir}")
     else:
-        debug_print("Warning: Could not determine PROJECT_DIR from environment")
+        print("Warning: Could not determine PROJECT_DIR from environment")
     return project_dir
 
 
@@ -81,13 +81,4 @@ serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
 
 # Import and execute scripts
 from arduinolib1_execute_scripts import execute_scripts
-
-# Import debug utility
-try:
-    from debug_utils import debug_print
-except ImportError:
-    # Fallback if debug_utils not found - create a no-op function
-    def debug_print(*args, **kwargs):
-        pass
-
 execute_scripts(project_dir, library_dir, serializable_macro=serializable_macro)
