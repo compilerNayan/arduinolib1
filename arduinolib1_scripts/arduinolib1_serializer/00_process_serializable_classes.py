@@ -10,14 +10,6 @@ import os
 import sys
 import importlib.util
 
-# Import debug utility
-try:
-    from debug_utils import debug_print
-except ImportError:
-    # Fallback if debug_utils not found - create a no-op function
-    def debug_print(*args, **kwargs):
-        pass
-
 debug_print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
 
 # Import get_client_files from arduinolib1_core
@@ -285,6 +277,15 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         
         # Extract validation fields
         import S7_extract_validation_fields
+
+# Import debug utility
+try:
+    from debug_utils import debug_print
+except ImportError:
+    # Fallback if debug_utils not found - create a no-op function
+    def debug_print(*args, **kwargs):
+        pass
+
         spec_s7 = importlib.util.spec_from_file_location("S7_extract_validation_fields", os.path.join(script_dir, "S7_extract_validation_fields.py"))
         S7_extract_validation_fields = importlib.util.module_from_spec(spec_s7)
         spec_s7.loader.exec_module(S7_extract_validation_fields)
