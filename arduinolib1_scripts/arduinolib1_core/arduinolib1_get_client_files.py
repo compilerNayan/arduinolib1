@@ -87,15 +87,6 @@ def get_client_files(project_dir, file_extensions=None, skip_exclusions=False):
 if __name__ == "__main__":
     # This can be called standalone for testing
     import sys
-
-# Import debug utility
-try:
-    from debug_utils import debug_print
-except ImportError:
-    # Fallback if debug_utils not found - create a no-op function
-    def debug_print(*args, **kwargs):
-        pass
-
     if len(sys.argv) > 1:
         project_dir = sys.argv[1]
     else:
@@ -104,5 +95,5 @@ except ImportError:
     
     files = get_client_files(project_dir)
     for f in files:
-        debug_print(f)
+        print(f)
 
