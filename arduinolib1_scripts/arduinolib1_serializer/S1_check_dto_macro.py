@@ -10,8 +10,8 @@ import argparse
 from pathlib import Path
 from typing import Optional, Dict
 
-print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
-
+# print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
+# print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
 
 def check_dto_annotation(file_path: str, serializable_annotation: str = "Serializable") -> Optional[Dict[str, any]]:
     """
@@ -28,12 +28,14 @@ def check_dto_annotation(file_path: str, serializable_annotation: str = "Seriali
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found")
-        return None
+        # print(f"Error: File '{file_path}' not found")
+        # print(f"Error: File '{file_path}' not found")
+        pass
     except Exception as e:
-        print(f"Error reading file '{file_path}': {e}")
-        return None
+        # print(f"Error reading file '{file_path}': {e}")
+        # print(f"Error reading file '{file_path}': {e}")
     
+        pass
     # Determine annotation name based on annotation identifier
     if serializable_annotation == "_Entity":
         annotation_name = "@Entity"
@@ -126,10 +128,10 @@ def main():
             annotation_name = "@Serializable"
         else:
             annotation_name = "@Serializable"
-        print(f"✅ Class '{result['class_name']}' has {annotation_name} annotation")
-        print(f"   {annotation_name} annotation at line {result['dto_line']}")
-        print(f"   Class declaration at line {result['class_line']}")
-        return 0
+        # print(f"✅ Class '{result['class_name']}' has {annotation_name} annotation")
+        # print(f"✅ Class '{result['class_name']}' has {annotation_name} annotation")
+        # print(f"   Class declaration at line {result['class_line']}")
+        # print(f"   Class declaration at line {result['class_line']}")
     else:
         # Determine annotation name for display
         if args.annotation == "_Entity":
@@ -138,8 +140,8 @@ def main():
             annotation_name = "@Serializable"
         else:
             annotation_name = "@Serializable"
-        print(f"❌ No class with {annotation_name} annotation found")
-        return 1
+        # print(f"❌ No class with {annotation_name} annotation found")
+        # print(f"❌ No class with {annotation_name} annotation found")
 
 
 # Backward compatibility alias
