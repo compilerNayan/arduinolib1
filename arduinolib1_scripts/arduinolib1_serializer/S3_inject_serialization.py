@@ -484,13 +484,11 @@ def mark_dto_annotation_processed(file_path: str, dry_run: bool = False, seriali
     except FileNotFoundError:
         # print(f"Error: File '{file_path}' not found")
         # print(f"Error: File '{file_path}' not found")
-        pass
+        return False
     except Exception as e:
         # print(f"Error modifying file '{file_path}': {e}")
         # print(f"Error modifying file '{file_path}': {e}")
-
-
-        pass
+        return False
 # Backward compatibility alias
 def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
     """
@@ -697,6 +695,10 @@ def main():
             annotation_name = "@Serializable"
         # print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
         # print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
+        # Actually mark the annotation as processed
+        mark_dto_annotation_processed(args.file_path, dry_run=False, serializable_annotation=serializable_annotation)
+    else:
+        # Determine annotation name for display
         if serializable_annotation == "_Entity":
             annotation_name = "@Entity"
         elif serializable_annotation == "Serializable":
