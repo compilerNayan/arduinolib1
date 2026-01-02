@@ -36,7 +36,7 @@ def get_library_dir():
         if potential.exists() and potential.is_dir():
             # print(f"✓ Found library path by searching up directory tree: {potential}")
             # print(f"✓ Found library path by searching up directory tree: {potential}")
-            pass
+            return potential
         parent = current.parent
         if parent == current:  # Reached filesystem root
             break
@@ -60,14 +60,14 @@ def get_project_dir():
     if not project_dir:
         project_dir = os.environ.get("CMAKE_PROJECT_DIR", None)
     
-    # if project_dir:
+    if project_dir:
         # print(f"\nClient project directory: {project_dir}")
+        pass
     else:
         # print("Warning: Could not determine PROJECT_DIR from environment")
         # print("Warning: Could not determine PROJECT_DIR from environment")
-
-
         pass
+    return project_dir
 # Get library scripts directory and add it to Python path
 library_scripts_dir = get_library_dir()
 sys.path.insert(0, str(library_scripts_dir))
