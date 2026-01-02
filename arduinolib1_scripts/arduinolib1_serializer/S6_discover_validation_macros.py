@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
-# print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
+print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
+
 # Import get_client_files from arduinolib1_core
 # First, find the arduinolib1_scripts directory to add to path
 try:
@@ -55,13 +55,12 @@ if arduinolib1_scripts_dir and os.path.exists(arduinolib1_scripts_dir):
         try:
             from arduinolib1_get_client_files import get_client_files
         except ImportError as e:
-            # print(f"Warning: Could not import get_client_files: {e}")
-            # print(f"Warning: Could not import get_client_files: {e}")
-            pass
-        # print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
-        # print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
-    # print(f"Warning: Could not find arduinolib1_scripts directory")
-    # print(f"Warning: Could not find arduinolib1_scripts directory")
+            print(f"Warning: Could not import get_client_files: {e}")
+    else:
+        print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
+else:
+    print(f"Warning: Could not find arduinolib1_scripts directory")
+
 def find_validation_macro_definitions(search_directories: List[str] = None) -> Dict[str, str]:
     """
     Discover all validation macros by scanning files for the pattern:
@@ -108,9 +107,8 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                     project_header_files = get_client_files(project_dir, file_extensions=['.h', '.hpp'])
                     header_files.extend(project_header_files)
                 except Exception as e:
-                    # print(f"Warning: Failed to get client files from project_dir: {e}")
-                    # print(f"Warning: Failed to get client files from project_dir: {e}")
-                    pass
+                    print(f"Warning: Failed to get client files from project_dir: {e}")
+            
             # Get files from library_dir (all files, not just headers, since validation macros might be in any file)
             if library_dir:
                 try:
@@ -119,9 +117,8 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                     library_header_files = [f for f in library_files if f.endswith(('.h', '.hpp'))]
                     header_files.extend(library_header_files)
                 except Exception as e:
-                    # print(f"Warning: Failed to get library files from library_dir: {e}")
-                    # print(f"Warning: Failed to get library files from library_dir: {e}")
-                    pass
+                    print(f"Warning: Failed to get library files from library_dir: {e}")
+            
             search_directories = []  # Will use file list instead
         else:
             # Fallback: Check if client_files is available in global scope
@@ -131,9 +128,8 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                 search_directories = []  # Will use file list instead
             else:
                 # Fallback to default directories
-                # print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
-                # print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
-                pass
+                print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
+                search_directories = ['src', 'platform']
     else:
         # search_directories was provided, use directory-based search
         pass
@@ -304,10 +300,10 @@ def main():
         search_dirs = args.search_dirs if args.search_dirs else None
         macros = find_validation_macro_definitions(search_dirs)
     
-    # print(f"Found {len(macros)} validation macro(s):")
-    # print(f"Found {len(macros)} validation macro(s):")
-        # print(f"  {macro_name} -> {function_name}")
-        # print(f"  {macro_name} -> {function_name}")
+    print(f"Found {len(macros)} validation macro(s):")
+    for macro_name, function_name in sorted(macros.items()):
+        print(f"  {macro_name} -> {function_name}")
+    
     return 0
 
 

@@ -23,27 +23,25 @@ def execute_scripts(project_dir, library_dir, serializable_macro="Serializable")
     globals()['library_dir'] = library_dir
     globals()['serializable_macro'] = serializable_macro
     
-    # print(f"\nproject_dir: {project_dir}")
-    # print(f"\nproject_dir: {project_dir}")
+    print(f"\nproject_dir: {project_dir}")
+    print(f"library_dir: {library_dir}")
     
     if project_dir:
         client_files = get_client_files(project_dir, file_extensions=['.h', '.cpp'])
-        # print(f"\nFound {len(client_files)} files in client project:")
-        # print(f"\nFound {len(client_files)} files in client project:")
+        print(f"\nFound {len(client_files)} files in client project:")
+        print("=" * 60)
         for file in client_files:
-            # print(file)
-            # print(file)
+            print(file)
+        print("=" * 60)
     
-            pass
     if library_dir:
         library_files = get_client_files(library_dir, skip_exclusions=True)
-        # print(f"\nFound {len(library_files)} files in library:")
-        # print(f"\nFound {len(library_files)} files in library:")
+        print(f"\nFound {len(library_files)} files in library:")
+        print("=" * 60)
         for file in library_files:
-            # print(file)
-            # print(file)
+            print(file)
+        print("=" * 60)
     
-            pass
     # Run the master serializer script (00_process_serializable_classes.py)
     # Find the serializer directory
     try:
@@ -62,10 +60,10 @@ def execute_scripts(project_dir, library_dir, serializable_macro="Serializable")
     if serializer_dir and os.path.exists(serializer_dir):
         serializer_script_path = os.path.join(serializer_dir, '00_process_serializable_classes.py')
         if os.path.exists(serializer_script_path):
-            # print(f"\n{'=' * 60}")
-            # print(f"\n{'=' * 60}")
-            # print(f"{'=' * 60}\n")
-            # print(f"{'=' * 60}\n")
+            print(f"\n{'=' * 60}")
+            print("Running serializer master script: 00_process_serializable_classes.py")
+            print(f"{'=' * 60}\n")
+            
             try:
                 # Set environment variables so serializer script can access project_dir and library_dir
                 if project_dir:
@@ -98,12 +96,11 @@ def execute_scripts(project_dir, library_dir, serializable_macro="Serializable")
                 elif hasattr(serializer_module, 'process_all_serializable_classes'):
                     serializer_module.process_all_serializable_classes(dry_run=False)
             except Exception as e:
-                # print(f"Error running serializer script: {e}")
-                # print(f"Error running serializer script: {e}")
+                print(f"Error running serializer script: {e}")
+                import traceback
                 traceback.print_exc()
         else:
-            # print(f"Warning: Serializer script not found at {serializer_script_path}")
-            # print(f"Warning: Serializer script not found at {serializer_script_path}")
-            pass
-        # print(f"Warning: Serializer directory not found at {serializer_dir}")
-        # print(f"Warning: Serializer directory not found at {serializer_dir}")
+            print(f"Warning: Serializer script not found at {serializer_script_path}")
+    else:
+        print(f"Warning: Serializer directory not found at {serializer_dir}")
+

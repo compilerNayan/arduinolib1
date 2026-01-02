@@ -12,8 +12,8 @@ import re
 from pathlib import Path
 from typing import List, Dict, Optional
 
-# print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
-# print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
+print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
+
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
@@ -24,8 +24,8 @@ try:
     import S6_discover_validation_macros
     import S7_extract_validation_fields
 except ImportError as e:
-    # print(f"Error: Could not import required modules: {e}")
-    # print(f"Error: Could not import required modules: {e}")
+    print(f"Error: Could not import required modules: {e}")
+    print("Make sure S1_check_dto_macro.py, S2_extract_dto_fields.py, S6_discover_validation_macros.py, and S7_extract_validation_fields.py are in the same directory.")
     sys.exit(1)
 
 
@@ -88,11 +88,10 @@ def add_include_if_needed(file_path: str, include_path: str) -> bool:
         
         return True
     except Exception as e:
-        # print(f"Error adding include: {e}")
-        # print(f"Error adding include: {e}")
+        print(f"Error adding include: {e}")
+        return False
 
 
-        pass
 def is_optional_type(field_type: str) -> bool:
     """
     Check if a field type is an optional type.
@@ -463,8 +462,8 @@ def mark_dto_annotation_processed(file_path: str, dry_run: bool = False, seriali
                     else:
                         modified_lines.append(line)  # Keep original for dry run display
                 modified = True
-                # if dry_run:
-                    # print(f"    Would mark as processed: {stripped_line}")
+                if dry_run:
+                    print(f"    Would mark as processed: {stripped_line}")
             else:
                 modified_lines.append(line)
         
@@ -472,25 +471,23 @@ def mark_dto_annotation_processed(file_path: str, dry_run: bool = False, seriali
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            # print(f"✓ Marked {annotation_name} annotation as processed in: {file_path}")
-            # print(f"✓ Marked {annotation_name} annotation as processed in: {file_path}")
-            # print(f"  Would mark {annotation_name} annotation as processed in: {file_path}")
-            # print(f"  Would mark {annotation_name} annotation as processed in: {file_path}")
+            print(f"✓ Marked {annotation_name} annotation as processed in: {file_path}")
+        elif modified and dry_run:
+            print(f"  Would mark {annotation_name} annotation as processed in: {file_path}")
+        elif not modified:
             # No annotation found (this is fine, might already be processed)
             pass
         
         return True
         
     except FileNotFoundError:
-        # print(f"Error: File '{file_path}' not found")
-        # print(f"Error: File '{file_path}' not found")
-        pass
+        print(f"Error: File '{file_path}' not found")
+        return False
     except Exception as e:
-        # print(f"Error modifying file '{file_path}': {e}")
-        # print(f"Error modifying file '{file_path}': {e}")
+        print(f"Error modifying file '{file_path}': {e}")
+        return False
 
 
-        pass
 # Backward compatibility alias
 def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
     """
@@ -517,17 +514,15 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        # print(f"Error reading file: {e}")
-        # print(f"Error reading file: {e}")
+        print(f"Error reading file: {e}")
+        return False
     
-        pass
     # Find class boundaries
     boundaries = S2_extract_dto_fields.find_class_boundaries(file_path, class_name)
     if not boundaries:
-        # print(f"Error: Could not find class boundaries for {class_name}")
-        # print(f"Error: Could not find class boundaries for {class_name}")
+        print(f"Error: Could not find class boundaries for {class_name}")
+        return False
     
-        pass
     start_line, end_line = boundaries
     
     # Find the closing brace line (should be end_line)
@@ -537,13 +532,12 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
     # Check if methods already exist
     class_content = ''.join(lines[start_line - 1:end_line])
     if 'Serialize()' in class_content and 'Deserialize(' in class_content:
-        # print(f"ℹ️  Serialization methods already exist in {class_name}")
-        # print(f"ℹ️  Serialization methods already exist in {class_name}")
+        print(f"ℹ️  Serialization methods already exist in {class_name}")
+        return True
     
-        pass
     if dry_run:
-        # print(f"Would inject methods before line {end_line}:")
-        # print(f"Would inject methods before line {end_line}:")
+        print(f"Would inject methods before line {end_line}:")
+        print(methods_code)
         return True
     
     # Insert methods before the closing brace
@@ -580,14 +574,13 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
     try:
         with open(file_path, 'w', encoding='utf-8') as file:
             file.writelines(lines)
-        # print(f"✅ Injected serialization methods into {class_name}")
-        # print(f"✅ Injected serialization methods into {class_name}")
+        print(f"✅ Injected serialization methods into {class_name}")
+        return True
     except Exception as e:
-        # print(f"Error writing file: {e}")
-        # print(f"Error writing file: {e}")
+        print(f"Error writing file: {e}")
+        return False
 
 
-        pass
 def main():
     """Main function to handle command line arguments and inject serialization methods."""
     parser = argparse.ArgumentParser(
@@ -609,51 +602,48 @@ def main():
     dto_info = S1_check_dto_macro.check_dto_macro(args.file_path)
     
     if not dto_info or not dto_info.get('has_dto'):
-        # print("❌ Error: Class does not have Serializable macro")
-        # print("❌ Error: Class does not have Serializable macro")
+        print("❌ Error: Class does not have Serializable macro")
+        return 1
     
-        pass
     class_name = dto_info['class_name']
-    # print(f"✅ Found Serializable class: {class_name}")
-    # print(f"✅ Found Serializable class: {class_name}")
+    print(f"✅ Found Serializable class: {class_name}")
+    
     # Extract fields (all access levels: public, private, protected, or no specifier)
     fields = S2_extract_dto_fields.extract_all_fields(args.file_path, class_name)
     
     if not fields:
-        # print("⚠️  Warning: No fields found in class")
-        # print("⚠️  Warning: No fields found in class")
+        print("⚠️  Warning: No fields found in class")
+        return 1
     
-        pass
     # Separate optional and non-optional fields
     optional_fields = [field for field in fields if is_optional_type(field['type'].strip())]
     non_optional_fields = [field for field in fields if not is_optional_type(field['type'].strip())]
     
-    # print(f"📋 Found {len(fields)} field(s) total:")
-    # print(f"📋 Found {len(fields)} field(s) total:")
-        # print(f"   ✅ {len(optional_fields)} optional field(s) (will be serialized):")
-        # print(f"   ✅ {len(optional_fields)} optional field(s) (will be serialized):")
-            # print(f"      {field['type']} {field['name']}")
-            # print(f"      {field['type']} {field['name']}")
-        # print(f"   ⏭️  {len(non_optional_fields)} non-optional field(s) (will be skipped):")
-        # print(f"   ⏭️  {len(non_optional_fields)} non-optional field(s) (will be skipped):")
-            # print(f"      {field['type']} {field['name']}")
-            # print(f"      {field['type']} {field['name']}")
+    print(f"📋 Found {len(fields)} field(s) total:")
+    if optional_fields:
+        print(f"   ✅ {len(optional_fields)} optional field(s) (will be serialized):")
+        for field in optional_fields:
+            print(f"      {field['type']} {field['name']}")
+    if non_optional_fields:
+        print(f"   ⏭️  {len(non_optional_fields)} non-optional field(s) (will be skipped):")
+        for field in non_optional_fields:
+            print(f"      {field['type']} {field['name']}")
+    
     # Check if any fields are optional
     has_optional_fields = len(optional_fields) > 0
     
-    # if not has_optional_fields:
-        # print("⚠️  Warning: No optional fields found. Serialization methods will be empty.")
+    if not has_optional_fields:
+        print("⚠️  Warning: No optional fields found. Serialization methods will be empty.")
     
     # Discover validation macros from source files
     # Pass None to use client_files from 05_list_client_files.py
     validation_macros = S6_discover_validation_macros.find_validation_macro_definitions(None)
     
     if validation_macros:
-        # print(f"🔍 Discovered {len(validation_macros)} validation macro(s):")
-        # print(f"🔍 Discovered {len(validation_macros)} validation macro(s):")
-            # print(f"   {macro_name} -> {function_name}")
-            # print(f"   {macro_name} -> {function_name}")
-        pass
+        print(f"🔍 Discovered {len(validation_macros)} validation macro(s):")
+        for macro_name, function_name in sorted(validation_macros.items()):
+            print(f"   {macro_name} -> {function_name}")
+    
     # Extract fields with validation macros (generic approach)
     validation_fields_by_macro = S7_extract_validation_fields.extract_validation_fields(
         args.file_path, class_name, validation_macros
@@ -661,12 +651,12 @@ def main():
     
     if validation_fields_by_macro:
         total_validated = sum(len(fields) for fields in validation_fields_by_macro.values())
-        # print(f"   🔒 {total_validated} field(s) with validation macros (will be validated):")
-        # print(f"   🔒 {total_validated} field(s) with validation macros (will be validated):")
-            # print(f"      {macro_name} ({len(fields_list)} field(s)):")
-            # print(f"      {macro_name} ({len(fields_list)} field(s)):")
-                # print(f"         {field['type']} {field['name']} (access: {field['access']})")
-                # print(f"         {field['type']} {field['name']} (access: {field['access']})")
+        print(f"   🔒 {total_validated} field(s) with validation macros (will be validated):")
+        for macro_name, fields_list in sorted(validation_fields_by_macro.items()):
+            print(f"      {macro_name} ({len(fields_list)} field(s)):")
+            for field in fields_list:
+                print(f"         {field['type']} {field['name']} (access: {field['access']})")
+    
     # Generate methods code
     methods_code = generate_serialization_methods(class_name, fields, validation_fields_by_macro)
     
@@ -695,24 +685,23 @@ def main():
             annotation_name = "@Serializable"
         else:
             annotation_name = "@Serializable"
-        # print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
-        # print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
+        print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
+    else:
         if serializable_annotation == "_Entity":
             annotation_name = "@Entity"
         elif serializable_annotation == "Serializable":
             annotation_name = "@Serializable"
         else:
             annotation_name = "@Serializable"
-        # print(f"  Would mark {annotation_name} annotation as processed in: {args.file_path}")
-        # print(f"  Would mark {annotation_name} annotation as processed in: {args.file_path}")
+        print(f"  Would mark {annotation_name} annotation as processed in: {args.file_path}")
+    mark_dto_annotation_processed(args.file_path, dry_run=args.dry_run, serializable_annotation=serializable_annotation)
     
     if args.dry_run:
-        # print("\n🔍 DRY RUN MODE - Generated methods code:")
-        # print("\n🔍 DRY RUN MODE - Generated methods code:")
-        # print(methods_code)
-        # print(methods_code)
+        print("\n🔍 DRY RUN MODE - Generated methods code:")
+        print("="*70)
+        print(methods_code)
+        print("="*70)
     
-        pass
     return 0
 
 

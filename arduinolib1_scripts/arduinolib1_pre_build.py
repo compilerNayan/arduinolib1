@@ -1,14 +1,14 @@
 # Print message immediately when script is loaded
-# print("Hello cool dudes normal")
-# print("Hello cool dudes normal")
+print("Hello cool dudes normal")
+
 # Import PlatformIO environment first (if available)
 env = None
 try:
     Import("env")
 except NameError:
     # Not running in PlatformIO environment (e.g., running from CMake)
-    # print("Note: Not running in PlatformIO environment - some features may be limited")
-    # print("Note: Not running in PlatformIO environment - some features may be limited")
+    print("Note: Not running in PlatformIO environment - some features may be limited")
+    # Create a mock env object for CMake builds
     class MockEnv:
         def get(self, key, default=None):
             return default
@@ -34,9 +34,8 @@ def get_library_dir():
     for _ in range(10):  # Search up to 10 levels
         potential = current / "arduinolib1_scripts"
         if potential.exists() and potential.is_dir():
-            # print(f"✓ Found library path by searching up directory tree: {potential}")
-            # print(f"✓ Found library path by searching up directory tree: {potential}")
-            pass
+            print(f"✓ Found library path by searching up directory tree: {potential}")
+            return potential
         parent = current.parent
         if parent == current:  # Reached filesystem root
             break
@@ -60,14 +59,13 @@ def get_project_dir():
     if not project_dir:
         project_dir = os.environ.get("CMAKE_PROJECT_DIR", None)
     
-    # if project_dir:
-        # print(f"\nClient project directory: {project_dir}")
+    if project_dir:
+        print(f"\nClient project directory: {project_dir}")
     else:
-        # print("Warning: Could not determine PROJECT_DIR from environment")
-        # print("Warning: Could not determine PROJECT_DIR from environment")
+        print("Warning: Could not determine PROJECT_DIR from environment")
+    return project_dir
 
 
-        pass
 # Get library scripts directory and add it to Python path
 library_scripts_dir = get_library_dir()
 sys.path.insert(0, str(library_scripts_dir))

@@ -95,6 +95,5 @@ if __name__ == "__main__":
     
     files = get_client_files(project_dir)
     for f in files:
-        # print(f)
-        # print(f)
-        pass
+        print(f)
+
