@@ -517,15 +517,13 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
     except Exception as e:
         # print(f"Error reading file: {e}")
         # print(f"Error reading file: {e}")
-    
-        pass
+        return False
     # Find class boundaries
     boundaries = S2_extract_dto_fields.find_class_boundaries(file_path, class_name)
     if not boundaries:
         # print(f"Error: Could not find class boundaries for {class_name}")
         # print(f"Error: Could not find class boundaries for {class_name}")
-    
-        pass
+        return False
     start_line, end_line = boundaries
     
     # Find the closing brace line (should be end_line)
@@ -537,8 +535,8 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
     if 'Serialize()' in class_content and 'Deserialize(' in class_content:
         # print(f"ℹ️  Serialization methods already exist in {class_name}")
         # print(f"ℹ️  Serialization methods already exist in {class_name}")
-    
-        pass
+        # Methods already exist, return True without injecting again
+        return True
     if dry_run:
         # print(f"Would inject methods before line {end_line}:")
         # print(f"Would inject methods before line {end_line}:")
@@ -580,12 +578,11 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
             file.writelines(lines)
         # print(f"✅ Injected serialization methods into {class_name}")
         # print(f"✅ Injected serialization methods into {class_name}")
+        return True
     except Exception as e:
         # print(f"Error writing file: {e}")
         # print(f"Error writing file: {e}")
-
-
-        pass
+        return False
 def main():
     """Main function to handle command line arguments and inject serialization methods."""
     parser = argparse.ArgumentParser(
