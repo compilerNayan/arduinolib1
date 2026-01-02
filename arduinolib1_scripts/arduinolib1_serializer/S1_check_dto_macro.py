@@ -13,13 +13,13 @@ from typing import Optional, Dict
 print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
 
 
-def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") -> Optional[Dict[str, any]]:
+def check_dto_annotation(file_path: str, serializable_annotation: str = "Serializable") -> Optional[Dict[str, any]]:
     """
-    Check if a C++ file contains a class with the @Serializable annotation above it.
+    Check if a C++ file contains a class with the @Serializable or @Entity annotation above it.
     
     Args:
         file_path: Path to the C++ file
-        serializable_macro: Name of the annotation to search for (kept for backward compatibility, but now looks for @Serializable)
+        serializable_annotation: Name of the annotation identifier (Serializable -> @Serializable, _Entity -> @Entity)
         
     Returns:
         Dictionary with 'class_name', 'has_dto', 'line_number' if found, None otherwise
@@ -34,10 +34,19 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
         print(f"Error reading file '{file_path}': {e}")
         return None
     
-    # Pattern to match /// @Serializable or ///@Serializable annotation (ignoring whitespace)
-    # Also check for already processed /* @Serializable */ pattern
-    serializable_annotation_pattern = r'///\s*@Serializable\b'
-    processed_pattern = r'/\*\s*@Serializable\s*\*/'
+    # Determine annotation name based on annotation identifier
+    if serializable_annotation == "_Entity":
+        annotation_name = "@Entity"
+    elif serializable_annotation == "Serializable":
+        annotation_name = "@Serializable"
+    else:
+        # Default to @Serializable for backward compatibility
+        annotation_name = "@Serializable"
+    
+    # Pattern to match /// @Entity or ///@Entity or /// @Serializable or ///@Serializable annotation (ignoring whitespace)
+    # Also check for already processed /* @Entity */ or /* @Serializable */ pattern
+    annotation_pattern = rf'///\s*{re.escape(annotation_name)}\b'
+    processed_pattern = rf'/\*\s*{re.escape(annotation_name)}\s*\*/'
     
     # Pattern to match class declarations
     class_pattern = r'class\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:[:{])'
@@ -45,13 +54,13 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
     for line_num, line in enumerate(lines, 1):
         stripped_line = line.strip()
         
-        # Check if line is already processed (/* @Serializable */)
+        # Check if line is already processed (/* @Entity */ or /* @Serializable */)
         if re.search(processed_pattern, stripped_line):
             continue
         
-        # Check for @Serializable annotation (/// @Serializable or ///@Serializable)
-        serializable_match = re.search(serializable_annotation_pattern, stripped_line)
-        if serializable_match:
+        # Check for annotation (/// @Entity or ///@Entity or /// @Serializable or ///@Serializable)
+        annotation_match = re.search(annotation_pattern, stripped_line)
+        if annotation_match:
             # Look ahead for class declaration (within next 10 lines)
             for i in range(line_num, min(line_num + 11, len(lines) + 1)):
                 if i <= len(lines):
@@ -61,7 +70,7 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
                     if next_line.startswith('/*') and not re.search(processed_pattern, next_line):
                         continue
                     # Skip other single-line comments that aren't the annotation
-                    if next_line.startswith('//') and not re.search(serializable_annotation_pattern, next_line):
+                    if next_line.startswith('//') and not re.search(annotation_pattern, next_line):
                         continue
                     
                     # Check for class declaration
@@ -75,12 +84,12 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
                             'class_line': i
                         }
                     
-                    # Stop if we hit something that's not a macro/annotation or class
-                    # Check if it starts with known macros/annotations
-                    known_macros = ('COMPONENT', 'SCOPE', 'VALIDATE', 'Dto')
-                    if next_line and not (next_line.startswith(known_macros) or 
+                    # Stop if we hit something that's not an annotation or class
+                    # Check if it starts with known annotations/macros
+                    known_annotations = ('COMPONENT', 'SCOPE', 'VALIDATE', 'Dto')
+                    if next_line and not (next_line.startswith(known_annotations) or 
                                          re.match(r'^[A-Z][A-Za-z0-9_]*\s*(?:\(|$)', next_line) or
-                                         re.search(serializable_annotation_pattern, next_line)):
+                                         re.search(annotation_pattern, next_line)):
                         break
     
     return {
@@ -91,35 +100,61 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
 def main():
     """Main function to handle command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Check if a C++ class has the @Serializable annotation above it"
+        description="Check if a C++ class has the @Serializable or @Entity annotation above it"
     )
     parser.add_argument(
         "file_path",
         help="Path to the C++ file to check"
     )
     parser.add_argument(
-        "--macro",
+        "--annotation",
+        "--macro",  # Keep for backward compatibility
+        dest="annotation",
         default="Serializable",
-        help="Name of the annotation to search for (kept for backward compatibility, but now looks for @Serializable)"
+        help="Name of the annotation identifier (Serializable -> @Serializable, _Entity -> @Entity)"
     )
     
     args = parser.parse_args()
     
-    result = check_dto_macro(args.file_path, args.macro)
+    result = check_dto_annotation(args.file_path, args.annotation)
     
     if result and result.get('has_dto'):
-        print(f"✅ Class '{result['class_name']}' has @Serializable annotation")
-        print(f"   @Serializable annotation at line {result['dto_line']}")
+        # Determine annotation name for display
+        if args.annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif args.annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            annotation_name = "@Serializable"
+        print(f"✅ Class '{result['class_name']}' has {annotation_name} annotation")
+        print(f"   {annotation_name} annotation at line {result['dto_line']}")
         print(f"   Class declaration at line {result['class_line']}")
         return 0
     else:
-        print("❌ No class with @Serializable annotation found")
+        # Determine annotation name for display
+        if args.annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif args.annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            annotation_name = "@Serializable"
+        print(f"❌ No class with {annotation_name} annotation found")
         return 1
+
+
+# Backward compatibility alias
+def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") -> Optional[Dict[str, any]]:
+    """
+    Deprecated: Use check_dto_annotation instead.
+    Check if a C++ file contains a class with the @Serializable or @Entity annotation above it.
+    """
+    return check_dto_annotation(file_path, serializable_macro)
 
 
 # Export functions for other scripts to import
 __all__ = [
-    'check_dto_macro',
+    'check_dto_annotation',
+    'check_dto_macro',  # Keep for backward compatibility
     'main'
 ]
 

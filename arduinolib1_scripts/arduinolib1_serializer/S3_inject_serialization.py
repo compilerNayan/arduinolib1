@@ -403,14 +403,14 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     return "\n".join(code_lines)
 
 
-def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
+def mark_dto_annotation_processed(file_path: str, dry_run: bool = False, serializable_annotation: str = "Serializable") -> bool:
     """
-    Replace the @Serializable annotation with processed marker in a C++ file.
+    Replace the @Serializable or @Entity annotation with processed marker in a C++ file.
     
     Args:
         file_path: Path to the C++ file to modify
         dry_run: If True, only show what would be changed without making changes
-        serializable_macro: Name of the annotation (kept for backward compatibility, but now looks for @Serializable)
+        serializable_annotation: Name of the annotation identifier (Serializable -> @Serializable, _Entity -> @Entity)
         
     Returns:
         True if file was modified successfully or would be modified, False otherwise
@@ -419,32 +419,46 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
         
+        # Determine annotation name based on annotation identifier
+        if serializable_annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif serializable_annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            # Default to @Serializable for backward compatibility
+            annotation_name = "@Serializable"
+        
         modified = False
         modified_lines = []
+        
+        # Pattern for processed annotation
+        processed_pattern = rf'^/\*\s*{re.escape(annotation_name)}\s*\*/\s*$'
+        # Pattern for annotation to process
+        annotation_pattern = rf'^///\s*{re.escape(annotation_name)}\s*$'
         
         for i, line in enumerate(lines):
             original_line = line
             stripped_line = line.strip()
             
-            # Check if line is already processed (/* @Serializable */)
-            if re.match(r'^/\*\s*@Serializable\s*\*/\s*$', stripped_line):
+            # Check if line is already processed (/* @Entity */ or /* @Serializable */)
+            if re.match(processed_pattern, stripped_line):
                 modified_lines.append(line)
                 continue
             
-            # Check if line contains /// @Serializable or ///@Serializable annotation
-            if re.match(r'^///\s*@Serializable\s*$', stripped_line):
+            # Check if line contains /// @Entity or ///@Entity or /// @Serializable or ///@Serializable annotation
+            if re.match(annotation_pattern, stripped_line):
                 # Replace with processed marker, preserving original indentation
                 if line.startswith(' '):
                     # Has indentation, preserve it
                     indent = len(line) - len(line.lstrip())
                     if not dry_run:
-                        modified_lines.append(' ' * indent + '/* @Serializable */\n')
+                        modified_lines.append(' ' * indent + f'/* {annotation_name} */\n')
                     else:
                         modified_lines.append(line)  # Keep original for dry run display
                 else:
                     # No indentation
                     if not dry_run:
-                        modified_lines.append('/* @Serializable */\n')
+                        modified_lines.append(f'/* {annotation_name} */\n')
                     else:
                         modified_lines.append(line)  # Keep original for dry run display
                 modified = True
@@ -457,9 +471,9 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            print(f"✓ Marked @Serializable annotation as processed in: {file_path}")
+            print(f"✓ Marked {annotation_name} annotation as processed in: {file_path}")
         elif modified and dry_run:
-            print(f"  Would mark @Serializable annotation as processed in: {file_path}")
+            print(f"  Would mark {annotation_name} annotation as processed in: {file_path}")
         elif not modified:
             # No annotation found (this is fine, might already be processed)
             pass
@@ -472,6 +486,15 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
     except Exception as e:
         print(f"Error modifying file '{file_path}': {e}")
         return False
+
+
+# Backward compatibility alias
+def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
+    """
+    Deprecated: Use mark_dto_annotation_processed instead.
+    Replace the @Serializable or @Entity annotation with processed marker in a C++ file.
+    """
+    return mark_dto_annotation_processed(file_path, dry_run, serializable_macro)
 
 
 def inject_methods_into_class(file_path: str, class_name: str, methods_code: str, dry_run: bool = False) -> bool:
@@ -651,14 +674,27 @@ def main():
     if not success:
         return 1
     
-    # Comment out Serializable macro after successful injection
-    # Get serializable_macro from environment or use default
-    serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
+    # Mark annotation as processed after successful injection
+    # Get serializable_annotation from environment or use default
+    serializable_annotation = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
     if not args.dry_run:
-        print(f"  Commenting {serializable_macro} macro in: {args.file_path}")
+        # Determine annotation name for display
+        if serializable_annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif serializable_annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            annotation_name = "@Serializable"
+        print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
     else:
-        print(f"  Would comment {serializable_macro} macro in: {args.file_path}")
-    comment_dto_macro(args.file_path, dry_run=args.dry_run, serializable_macro=serializable_macro)
+        if serializable_annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif serializable_annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            annotation_name = "@Serializable"
+        print(f"  Would mark {annotation_name} annotation as processed in: {args.file_path}")
+    mark_dto_annotation_processed(args.file_path, dry_run=args.dry_run, serializable_annotation=serializable_annotation)
     
     if args.dry_run:
         print("\n🔍 DRY RUN MODE - Generated methods code:")
@@ -676,7 +712,8 @@ __all__ = [
     'is_optional_type',
     'extract_inner_type_from_optional',
     'generate_serialization_methods',
-    'comment_dto_macro',
+    'mark_dto_annotation_processed',
+    'comment_dto_macro',  # Keep for backward compatibility
     'inject_methods_into_class',
     'main'
 ]
