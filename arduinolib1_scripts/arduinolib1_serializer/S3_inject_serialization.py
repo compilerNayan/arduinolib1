@@ -12,6 +12,14 @@ import re
 from pathlib import Path
 from typing import List, Dict, Optional
 
+# Import debug utility
+try:
+    from debug_utils import debug_print
+except ImportError:
+    # Fallback if debug_utils not found - create a no-op function
+    def debug_print(*args, **kwargs):
+        pass
+
 debug_print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
 
 # Add parent directory to path for imports
