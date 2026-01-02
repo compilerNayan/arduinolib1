@@ -161,7 +161,9 @@ except ImportError:
     # Fallback if debug_utils not found - create a no-op function
     def debug_print(*args, **kwargs):
         pass
- = [
+
+# Export functions for other scripts to import
+__all__ = [
     'check_dto_annotation',
     'check_dto_macro',  # Keep for backward compatibility
     'main'
