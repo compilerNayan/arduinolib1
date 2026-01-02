@@ -10,14 +10,6 @@ import argparse
 from pathlib import Path
 from typing import Optional, Dict
 
-# Import debug utility
-try:
-    from debug_utils import debug_print
-except ImportError:
-    # Fallback if debug_utils not found - create a no-op function
-    def debug_print(*args, **kwargs):
-        pass
-
 debug_print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
 
 
@@ -158,6 +150,17 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
     """
     return check_dto_annotation(file_path, serializable_macro)
 
+
+# Export functions for other scripts to import
+__all__
+
+# Import debug utility
+try:
+    from debug_utils import debug_print
+except ImportError:
+    # Fallback if debug_utils not found - create a no-op function
+    def debug_print(*args, **kwargs):
+        pass
 
 # Export functions for other scripts to import
 __all__ = [
