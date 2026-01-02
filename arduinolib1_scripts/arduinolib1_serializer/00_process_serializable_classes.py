@@ -2,7 +2,7 @@
 """
 00 Process Serializable Classes Script
 
-Orchestrator script that processes all classes with Serializable macro in client files.
+Orchestrator script that processes all classes with @Serializable annotation in client files.
 Uses 05_list_client_files.py to get the list of client files.
 """
 
@@ -180,11 +180,11 @@ spec_s3.loader.exec_module(S3_inject_serialization)
 
 def process_all_serializable_classes(dry_run=False, serializable_macro=None):
     """
-    Process all client files that contain classes with Serializable macro.
+    Process all client files that contain classes with @Serializable annotation.
     
     Args:
         dry_run: If True, show what would be processed without modifying files
-        serializable_macro: Name of the macro to search for (default: "Serializable" or from environment)
+        serializable_macro: Name of the annotation (kept for backward compatibility, but now looks for @Serializable)
         
     Returns:
         Number of files processed
@@ -237,7 +237,7 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         if not os.path.exists(file_path):
             continue
         
-        # Check if file has Serializable macro
+        # Check if file has @Serializable annotation
         dto_info = S1_check_dto_macro.check_dto_macro(file_path, serializable_macro)
         
         if not dto_info or not dto_info.get('has_dto'):
@@ -302,7 +302,7 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         success = S3_inject_serialization.inject_methods_into_class(file_path, class_name, methods_code, dry_run=dry_run)
         
         if success:
-            # Comment out Serializable macro
+            # Mark @Serializable annotation as processed
             if not dry_run:
                 S3_inject_serialization.comment_dto_macro(file_path, dry_run=False, serializable_macro=serializable_macro)
             processed_count += 1

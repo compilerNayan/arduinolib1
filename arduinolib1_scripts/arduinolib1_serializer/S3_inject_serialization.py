@@ -405,12 +405,12 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
 
 def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
     """
-    Comment out the Serializable macro in a C++ file.
+    Replace the @Serializable annotation with processed marker in a C++ file.
     
     Args:
         file_path: Path to the C++ file to modify
         dry_run: If True, only show what would be changed without making changes
-        serializable_macro: Name of the macro to comment out (default: "Serializable")
+        serializable_macro: Name of the annotation (kept for backward compatibility, but now looks for @Serializable)
         
     Returns:
         True if file was modified successfully or would be modified, False otherwise
@@ -426,21 +426,30 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
             original_line = line
             stripped_line = line.strip()
             
-            # Skip already commented lines
-            if stripped_line.startswith('//') or stripped_line.startswith('/*') or stripped_line.startswith('*'):
+            # Check if line is already processed (/* @Serializable */)
+            if re.match(r'^/\*\s*@Serializable\s*\*/\s*$', stripped_line):
                 modified_lines.append(line)
                 continue
             
-            # Check if line contains standalone Serializable macro
-            if stripped_line == serializable_macro:
-                # Add comment prefix
-                if not dry_run:
-                    modified_lines.append('// ' + line)
+            # Check if line contains /// @Serializable or ///@Serializable annotation
+            if re.match(r'^///\s*@Serializable\s*$', stripped_line):
+                # Replace with processed marker, preserving original indentation
+                if line.startswith(' '):
+                    # Has indentation, preserve it
+                    indent = len(line) - len(line.lstrip())
+                    if not dry_run:
+                        modified_lines.append(' ' * indent + '/* @Serializable */\n')
+                    else:
+                        modified_lines.append(line)  # Keep original for dry run display
                 else:
-                    modified_lines.append(line)  # Keep original for dry run display
+                    # No indentation
+                    if not dry_run:
+                        modified_lines.append('/* @Serializable */\n')
+                    else:
+                        modified_lines.append(line)  # Keep original for dry run display
                 modified = True
                 if dry_run:
-                    print(f"    Would comment: {stripped_line}")
+                    print(f"    Would mark as processed: {stripped_line}")
             else:
                 modified_lines.append(line)
         
@@ -448,11 +457,11 @@ def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro:
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            print(f"✓ Commented {serializable_macro} macro in: {file_path}")
+            print(f"✓ Marked @Serializable annotation as processed in: {file_path}")
         elif modified and dry_run:
-            print(f"  Would comment {serializable_macro} macro in: {file_path}")
+            print(f"  Would mark @Serializable annotation as processed in: {file_path}")
         elif not modified:
-            # No macro found (this is fine, might already be commented)
+            # No annotation found (this is fine, might already be processed)
             pass
         
         return True
