@@ -286,9 +286,7 @@ except ImportError:
     # Fallback if debug_utils not found - create a no-op function
     def debug_print(*args, **kwargs):
         pass
-
-# Export functions for other scripts to import
-__all__ = [
+ = [
     'extract_validation_fields',
     'get_validation_function_info',
     'is_string_type',
