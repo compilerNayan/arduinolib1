@@ -10,7 +10,7 @@ import argparse
 from pathlib import Path
 from typing import Optional, Dict
 
-print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
+debug_print("Executing NayanSerializer/scripts/serializer/S1_check_dto_macro.py")
 
 
 def check_dto_annotation(file_path: str, serializable_annotation: str = "Serializable") -> Optional[Dict[str, any]]:
@@ -28,10 +28,10 @@ def check_dto_annotation(file_path: str, serializable_annotation: str = "Seriali
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found")
+        debug_print(f"Error: File '{file_path}' not found")
         return None
     except Exception as e:
-        print(f"Error reading file '{file_path}': {e}")
+        debug_print(f"Error reading file '{file_path}': {e}")
         return None
     
     # Determine annotation name based on annotation identifier
@@ -126,9 +126,9 @@ def main():
             annotation_name = "@Serializable"
         else:
             annotation_name = "@Serializable"
-        print(f"✅ Class '{result['class_name']}' has {annotation_name} annotation")
-        print(f"   {annotation_name} annotation at line {result['dto_line']}")
-        print(f"   Class declaration at line {result['class_line']}")
+        debug_print(f"✅ Class '{result['class_name']}' has {annotation_name} annotation")
+        debug_print(f"   {annotation_name} annotation at line {result['dto_line']}")
+        debug_print(f"   Class declaration at line {result['class_line']}")
         return 0
     else:
         # Determine annotation name for display
@@ -138,7 +138,7 @@ def main():
             annotation_name = "@Serializable"
         else:
             annotation_name = "@Serializable"
-        print(f"❌ No class with {annotation_name} annotation found")
+        debug_print(f"❌ No class with {annotation_name} annotation found")
         return 1
 
 
@@ -152,7 +152,16 @@ def check_dto_macro(file_path: str, serializable_macro: str = "Serializable") ->
 
 
 # Export functions for other scripts to import
-__all__ = [
+__all__
+
+# Import debug utility
+try:
+    from debug_utils import debug_print
+except ImportError:
+    # Fallback if debug_utils not found - create a no-op function
+    def debug_print(*args, **kwargs):
+        pass
+ = [
     'check_dto_annotation',
     'check_dto_macro',  # Keep for backward compatibility
     'main'

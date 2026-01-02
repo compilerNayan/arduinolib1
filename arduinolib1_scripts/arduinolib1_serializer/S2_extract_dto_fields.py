@@ -10,7 +10,7 @@ import argparse
 from pathlib import Path
 from typing import List, Dict, Optional
 
-print("Executing NayanSerializer/scripts/serializer/S2_extract_dto_fields.py")
+debug_print("Executing NayanSerializer/scripts/serializer/S2_extract_dto_fields.py")
 
 
 def find_class_boundaries(file_path: str, class_name: str) -> Optional[tuple]:
@@ -28,7 +28,7 @@ def find_class_boundaries(file_path: str, class_name: str) -> Optional[tuple]:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        print(f"Error reading file: {e}")
+        debug_print(f"Error reading file: {e}")
         return None
     
     class_start = None
@@ -87,7 +87,7 @@ def extract_all_fields(file_path: str, class_name: str) -> List[Dict[str, str]]:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        print(f"Error reading file: {e}")
+        debug_print(f"Error reading file: {e}")
         return []
     
     class_lines = lines[start_line - 1:end_line]
@@ -152,9 +152,9 @@ def main():
     
     fields = extract_public_fields(args.file_path, args.class_name)
     
-    print(f"Fields found: {len(fields)}")
+    debug_print(f"Fields found: {len(fields)}")
     for field in fields:
-        print(f"  {field['type']} {field['name']}")
+        debug_print(f"  {field['type']} {field['name']}")
     
     return 0
 
@@ -163,7 +163,16 @@ def main():
 extract_public_fields = extract_all_fields
 
 # Export functions for other scripts to import
-__all__ = [
+__all__
+
+# Import debug utility
+try:
+    from debug_utils import debug_print
+except ImportError:
+    # Fallback if debug_utils not found - create a no-op function
+    def debug_print(*args, **kwargs):
+        pass
+ = [
     'find_class_boundaries',
     'extract_all_fields',
     'extract_public_fields',
