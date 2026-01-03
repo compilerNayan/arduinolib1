@@ -9,6 +9,31 @@ Uses 05_list_client_files.py to get the list of client files.
 import os
 import sys
 import importlib.util
+from pathlib import Path
+
+# Import logging utility
+try:
+    # Try to find and import pre_build_logger
+    script_dir = Path(__file__).parent if '__file__' in globals() else Path(os.getcwd())
+    # Search for arduinolib0_scripts
+    for parent in [script_dir] + list(script_dir.parents)[:10]:
+        logger_path = parent / "arduinolib0" / "arduinolib0_scripts" / "pre_build_logger.py"
+        if logger_path.exists():
+            sys.path.insert(0, str(logger_path.parent))
+            from pre_build_logger import log_annotation_processed, log_summary
+            break
+    else:
+        # Fallback: create minimal logger functions
+        def log_annotation_processed(annotation, file_path, details=None):
+            pass
+        def log_summary(module_name, processed_count, total_count=None):
+            pass
+except Exception:
+    # Fallback: create minimal logger functions
+    def log_annotation_processed(annotation, file_path, details=None):
+        pass
+    def log_summary(module_name, processed_count, total_count=None):
+        pass
 
 # print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
 # print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
@@ -314,11 +339,9 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
             if not dry_run:
                 S3_inject_serialization.comment_dto_macro(file_path, dry_run=False, serializable_macro=serializable_macro)
             processed_count += 1
-            # print(f"   ✅ Successfully processed {class_name}")
-            # print(f"   ✅ Successfully processed {class_name}")
+            annotation_name = "@Entity" if serializable_macro == "_Entity" else "@Serializable"
+            log_annotation_processed(annotation_name, file_path, f"class {class_name}")
         else:
-            # print(f"   ❌ Failed to process {class_name}")
-            # print(f"   ❌ Failed to process {class_name}")
             pass
     return processed_count
 
@@ -335,12 +358,7 @@ def main():
     processed_count = process_all_serializable_classes(dry_run=False, serializable_macro=serializable_macro)
     
     if processed_count > 0:
-        # print(f"\n✅ Successfully processed {processed_count} file(s) with Serializable classes")
-        pass
-    else:
-        # print("\nℹ️  No files with Serializable classes found")
-        # print("\nℹ️  No files with Serializable classes found")
-        pass
+        log_summary("Serialization", processed_count)
     return 0
 
 
