@@ -204,6 +204,8 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     
     # Always generate validation function (even if empty) so nested objects can call it
     code_lines.append("        // Validation method for all validation macros")
+    code_lines.append("        #pragma GCC diagnostic push")
+    code_lines.append("        #pragma GCC diagnostic ignored \"-Wunused-parameter\"")
     code_lines.append(f"        Public template<typename DocType>")
     code_lines.append(f"        Static StdString ValidateFields(DocType& doc) {{")
     code_lines.append("        StdString validationErrors;")
@@ -269,6 +271,7 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     code_lines.append("")
     code_lines.append("        return validationErrors;")
     code_lines.append("    }")
+    code_lines.append("        #pragma GCC diagnostic pop")
     code_lines.append("")
     
     # Generate static Deserialize() method
