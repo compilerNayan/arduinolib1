@@ -22,6 +22,6 @@
   "frameworks": "arduino",
   "platforms": "*",
   "build": {
-    "extraScript": "arduinolib1_scripts/arduinolib1_pre_build.py"
+    "extraScript": "serializationlib_scripts/serializationlib_pre_build.py"
   }
 }

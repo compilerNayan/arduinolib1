@@ -6,7 +6,7 @@ This script imports get_client_files and processes the client project files.
 import os
 import sys
 import importlib.util
-from arduinolib1_core.arduinolib1_get_client_files import get_client_files
+from serializationlib_core.serializationlib_get_client_files import get_client_files
 
 
 def execute_scripts(project_dir, library_dir, serializable_macro="Serializable"):
@@ -50,12 +50,12 @@ def execute_scripts(project_dir, library_dir, serializable_macro="Serializable")
         # Get the directory of this script
         current_file = os.path.abspath(__file__)
         current_dir = os.path.dirname(current_file)
-        # current_dir is arduinolib1_scripts/, so serializer is in arduinolib1_serializer/
-        serializer_dir = os.path.join(current_dir, 'arduinolib1_serializer')
+        # current_dir is serializationlib_scripts/, so serializer is in serializationlib_serializer/
+        serializer_dir = os.path.join(current_dir, 'serializationlib_serializer')
     except NameError:
         # __file__ not available, try to find from library_dir
         if library_dir:
-            serializer_dir = os.path.join(library_dir, 'arduinolib1_scripts', 'arduinolib1_serializer')
+            serializer_dir = os.path.join(library_dir, 'serializationlib_scripts', 'serializationlib_serializer')
         else:
             serializer_dir = None
     

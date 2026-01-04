@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
-project(arduinolib1 VERSION 1.0.0 LANGUAGES CXX)
+project(serializationlib VERSION 1.0.0 LANGUAGES CXX)
 
 # Run pre-build script during configuration (runs even if client creates own library)
 # This will run whenever this CMakeLists.txt is processed
 find_program(PYTHON_EXECUTABLE python3 python)
-if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py")
+if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/serializationlib_scripts/serializationlib_pre_build.py")
     # Get the client project directory (CMAKE_SOURCE_DIR is the top-level project source directory)
     # When this library is included via FetchContent, CMAKE_SOURCE_DIR points to the client project
     set(CLIENT_PROJECT_DIR ${CMAKE_SOURCE_DIR})
@@ -14,7 +14,7 @@ if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts
     
     execute_process(
         COMMAND ${PYTHON_EXECUTABLE} 
-            "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/serializationlib_scripts/serializationlib_pre_build.py"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         RESULT_VARIABLE PRE_BUILD_RESULT
         OUTPUT_VARIABLE PRE_BUILD_OUTPUT
@@ -23,13 +23,13 @@ if(PYTHON_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts
         ERROR_STRIP_TRAILING_WHITESPACE
     )
     if(PRE_BUILD_OUTPUT)
-        message(STATUS "arduinolib1 pre-build output:\n${PRE_BUILD_OUTPUT}")
+        message(STATUS "serializationlib pre-build output:\n${PRE_BUILD_OUTPUT}")
     endif()
     if(PRE_BUILD_ERROR)
-        message(STATUS "arduinolib1 pre-build errors (expected in non-PlatformIO environment):\n${PRE_BUILD_ERROR}")
+        message(STATUS "serializationlib pre-build errors (expected in non-PlatformIO environment):\n${PRE_BUILD_ERROR}")
     endif()
     if(PRE_BUILD_RESULT AND NOT PRE_BUILD_RESULT EQUAL "0")
-        message(STATUS "arduinolib1 pre-build script exited with code ${PRE_BUILD_RESULT} (this is expected in non-PlatformIO CMake builds)")
+        message(STATUS "serializationlib pre-build script exited with code ${PRE_BUILD_RESULT} (this is expected in non-PlatformIO CMake builds)")
     endif()
 endif()
 
@@ -57,15 +57,15 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cppcore)
 
 # Create header-only library (INTERFACE library)
-add_library(arduinolib1 INTERFACE)
+add_library(serializationlib INTERFACE)
 
 # Set target properties
-set_target_properties(arduinolib1 PROPERTIES
+set_target_properties(serializationlib PROPERTIES
     VERSION ${PROJECT_VERSION}
 )
 
 # Set include directories
-target_include_directories(arduinolib1 INTERFACE
+target_include_directories(serializationlib INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
@@ -74,7 +74,7 @@ target_include_directories(arduinolib1 INTERFACE
 # Use BUILD_INTERFACE generator expression to properly handle FetchContent paths
 FetchContent_GetProperties(cppcore)
 if(cppcore_SOURCE_DIR)
-    target_include_directories(arduinolib1 INTERFACE
+    target_include_directories(serializationlib INTERFACE
         $<BUILD_INTERFACE:${cppcore_SOURCE_DIR}/include>
     )
 endif()
@@ -82,14 +82,14 @@ endif()
 # Link ArduinoJson (header-only library)
 # Try the namespaced target first, fallback to non-namespaced
 if(TARGET ArduinoJson::ArduinoJson)
-    target_link_libraries(arduinolib1 INTERFACE ArduinoJson::ArduinoJson)
+    target_link_libraries(serializationlib INTERFACE ArduinoJson::ArduinoJson)
 elseif(TARGET ArduinoJson)
-    target_link_libraries(arduinolib1 INTERFACE ArduinoJson)
+    target_link_libraries(serializationlib INTERFACE ArduinoJson)
 else()
     # Fallback: manually add include directory if target doesn't exist
     FetchContent_GetProperties(ArduinoJson)
     if(ArduinoJson_SOURCE_DIR)
-        target_include_directories(arduinolib1 INTERFACE ${ArduinoJson_SOURCE_DIR})
+        target_include_directories(serializationlib INTERFACE ${ArduinoJson_SOURCE_DIR})
     endif()
 endif()
 
@@ -109,33 +109,33 @@ else()
     get_filename_component(CLIENT_PROJECT_DIR "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 endif()
 
-add_custom_target(arduinolib1_pre_build
+add_custom_target(serializationlib_pre_build
     COMMAND ${CMAKE_COMMAND} -E env "CMAKE_PROJECT_DIR=${CLIENT_PROJECT_DIR}"
         ${PYTHON_EXECUTABLE} 
-        "${CMAKE_CURRENT_SOURCE_DIR}/arduinolib1_scripts/arduinolib1_pre_build.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/serializationlib_scripts/serializationlib_pre_build.py"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Running arduinolib1 pre-build script"
+    COMMENT "Running serializationlib pre-build script"
     VERBATIM
 )
 
 # Make the library depend on the pre-build step
-add_dependencies(arduinolib1 arduinolib1_pre_build)
+add_dependencies(serializationlib serializationlib_pre_build)
 
 # Optional: Set up installation
 include(GNUInstallDirs)
 
-install(TARGETS arduinolib1
-    EXPORT arduinolib1Targets
+install(TARGETS serializationlib
+    EXPORT serializationlibTargets
 )
 
 install(FILES src/NayanMath.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-install(EXPORT arduinolib1Targets
-    FILE arduinolib1Targets.cmake
-    NAMESPACE arduinolib1::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/arduinolib1
+install(EXPORT serializationlibTargets
+    FILE serializationlibTargets.cmake
+    NAMESPACE serializationlib::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/serializationlib
 )
 
 # Optional: Create a config file for find_package support
@@ -144,20 +144,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/arduinolib1Config.cmake.in")
 
     configure_package_config_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/arduinolib1Config.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/arduinolib1Config.cmake"
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/arduinolib1
+        "${CMAKE_CURRENT_BINARY_DIR}/serializationlibConfig.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/serializationlib
     )
 
     write_basic_package_version_file(
-        "${CMAKE_CURRENT_BINARY_DIR}/arduinolib1ConfigVersion.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/serializationlibConfigVersion.cmake"
         VERSION ${PROJECT_VERSION}
         COMPATIBILITY AnyNewerVersion
     )
 
     install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/arduinolib1Config.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/arduinolib1ConfigVersion.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/arduinolib1
+        "${CMAKE_CURRENT_BINARY_DIR}/serializationlibConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/serializationlibConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/serializationlib
     )
 endif()
 

@@ -16,30 +16,30 @@ from typing import Dict, List, Optional
 
 # print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
 # print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
-# Import get_client_files from arduinolib1_core
-# First, find the arduinolib1_scripts directory to add to path
+# Import get_client_files from serializationlib_core
+# First, find the serializationlib_scripts directory to add to path
 try:
     script_file = os.path.abspath(__file__)
     current_dir = os.path.dirname(script_file)
-    # current_dir is arduinolib1_serializer/, so parent is arduinolib1_scripts/
-    arduinolib1_scripts_dir = os.path.dirname(current_dir)
+    # current_dir is serializationlib_serializer/, so parent is serializationlib_scripts/
+    serializationlib_scripts_dir = os.path.dirname(current_dir)
 except NameError:
     # __file__ not available, try to find from globals or search
-    arduinolib1_scripts_dir = None
+    serializationlib_scripts_dir = None
     if 'library_scripts_dir' in globals():
-        arduinolib1_scripts_dir = str(globals()['library_scripts_dir'])
+        serializationlib_scripts_dir = str(globals()['library_scripts_dir'])
     elif 'library_dir' in globals():
-        # library_dir is parent of arduinolib1_scripts
-        potential = os.path.join(str(globals()['library_dir']), 'arduinolib1_scripts')
+        # library_dir is parent of serializationlib_scripts
+        potential = os.path.join(str(globals()['library_dir']), 'serializationlib_scripts')
         if os.path.exists(potential):
-            arduinolib1_scripts_dir = potential
+            serializationlib_scripts_dir = potential
     else:
         # Search from current directory
         search_dir = os.getcwd()
         for _ in range(5):  # Search up to 5 levels
-            potential = os.path.join(search_dir, 'arduinolib1_scripts')
+            potential = os.path.join(search_dir, 'serializationlib_scripts')
             if os.path.exists(potential) and os.path.isdir(potential):
-                arduinolib1_scripts_dir = potential
+                serializationlib_scripts_dir = potential
                 break
             parent = os.path.dirname(search_dir)
             if parent == search_dir:  # Reached root
@@ -48,20 +48,20 @@ except NameError:
 
 # Add to path and import
 get_client_files = None
-if arduinolib1_scripts_dir and os.path.exists(arduinolib1_scripts_dir):
-    core_dir = os.path.join(arduinolib1_scripts_dir, 'arduinolib1_core')
+if serializationlib_scripts_dir and os.path.exists(serializationlib_scripts_dir):
+    core_dir = os.path.join(serializationlib_scripts_dir, 'serializationlib_core')
     if os.path.exists(core_dir):
         sys.path.insert(0, core_dir)
         try:
-            from arduinolib1_get_client_files import get_client_files
+            from serializationlib_get_client_files import get_client_files
         except ImportError as e:
             # print(f"Warning: Could not import get_client_files: {e}")
             # print(f"Warning: Could not import get_client_files: {e}")
             pass
-        # print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
-        # print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
-    # print(f"Warning: Could not find arduinolib1_scripts directory")
-    # print(f"Warning: Could not find arduinolib1_scripts directory")
+        # print(f"Warning: Could not find serializationlib_core directory at {core_dir}")
+        # print(f"Warning: Could not find serializationlib_core directory at {core_dir}")
+    # print(f"Warning: Could not find serializationlib_scripts directory")
+    # print(f"Warning: Could not find serializationlib_scripts directory")
 def find_validation_macro_definitions(search_directories: List[str] = None) -> Dict[str, str]:
     """
     Discover all validation macros by scanning files for the pattern:

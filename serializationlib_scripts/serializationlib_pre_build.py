@@ -21,10 +21,10 @@ from pathlib import Path
 
 def get_library_dir():
     """
-    Find the arduinolib1_scripts directory by searching up the directory tree.
+    Find the serializationlib_scripts directory by searching up the directory tree.
     
     Returns:
-        Path: Path to the arduinolib1_scripts directory
+        Path: Path to the serializationlib_scripts directory
         
     Raises:
         ImportError: If the directory cannot be found
@@ -32,7 +32,7 @@ def get_library_dir():
     cwd = Path(os.getcwd())
     current = cwd
     for _ in range(10):  # Search up to 10 levels
-        potential = current / "arduinolib1_scripts"
+        potential = current / "serializationlib_scripts"
         if potential.exists() and potential.is_dir():
             # print(f"✓ Found library path by searching up directory tree: {potential}")
             # print(f"✓ Found library path by searching up directory tree: {potential}")
@@ -41,7 +41,7 @@ def get_library_dir():
         if parent == current:  # Reached filesystem root
             break
         current = parent
-    raise ImportError("Could not find arduinolib1_scripts directory")
+    raise ImportError("Could not find serializationlib_scripts directory")
 
 
 def get_project_dir():
@@ -72,7 +72,7 @@ def get_project_dir():
 library_scripts_dir = get_library_dir()
 sys.path.insert(0, str(library_scripts_dir))
 
-# Get library root directory (parent of arduinolib1_scripts)
+# Get library root directory (parent of serializationlib_scripts)
 library_dir = library_scripts_dir.parent
 
 # Get project directory
@@ -82,5 +82,5 @@ project_dir = get_project_dir()
 serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
 
 # Import and execute scripts
-from arduinolib1_execute_scripts import execute_scripts
+from serializationlib_execute_scripts import execute_scripts
 execute_scripts(project_dir, library_dir, serializable_macro=serializable_macro)
