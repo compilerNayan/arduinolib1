@@ -48,13 +48,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(ArduinoJson)
 
-# Fetch arduinolib0 for StandardDefines.h
+# Fetch cppcore for StandardDefines.h
 FetchContent_Declare(
-    arduinolib0
+    cppcore
     GIT_REPOSITORY https://github.com/compilerNayan/arduinolib0.git
     GIT_TAG        dev  # Use the main branch
 )
-FetchContent_MakeAvailable(arduinolib0)
+FetchContent_MakeAvailable(cppcore)
 
 # Create header-only library (INTERFACE library)
 add_library(arduinolib1 INTERFACE)
@@ -70,12 +70,12 @@ target_include_directories(arduinolib1 INTERFACE
     $<INSTALL_INTERFACE:include>
 )
 
-# Add arduinolib0 include directory (for StandardDefines.h)
+# Add cppcore include directory (for StandardDefines.h)
 # Use BUILD_INTERFACE generator expression to properly handle FetchContent paths
-FetchContent_GetProperties(arduinolib0)
-if(arduinolib0_SOURCE_DIR)
+FetchContent_GetProperties(cppcore)
+if(cppcore_SOURCE_DIR)
     target_include_directories(arduinolib1 INTERFACE
-        $<BUILD_INTERFACE:${arduinolib0_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${cppcore_SOURCE_DIR}/include>
     )
 endif()
 
