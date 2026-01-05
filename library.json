@@ -13,15 +13,15 @@
     "url": "https://github.com/compilerNayan/arduinolib1.git"
   },
   "dependencies": {
-    "PioLibStuff": "https://github.com/compilerNayan/arduinolib1.git",
+    "PioLibStuff": "https://github.com/compilerNayan/arduinolib1.git#dev",
     "ArduinoJson" : "https://github.com/bblanchon/ArduinoJson.git",
-    "arduinolib0": "https://github.com/compilerNayan/arduinolib0.git"
+    "cppcore": "https://github.com/compilerNayan/arduinolib0.git#dev"
   },
   "license": "MIT",
   "homepage": "",
   "frameworks": "arduino",
   "platforms": "*",
   "build": {
-    "extraScript": "arduinolib1_scripts/arduinolib1_pre_build.py"
+    "extraScript": "serializationlib_scripts/serializationlib_pre_build.py"
   }
 }

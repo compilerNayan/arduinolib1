@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-S4 Check NotNull Macro Script
+S4 Check NotNull Annotation Script
 
-This script checks if a class member has the NotNull macro above it.
+This script checks if a class member has the @NotNull annotation above it.
 """
 
 import re
@@ -12,8 +12,8 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional
 
-print("Executing NayanSerializer/scripts/serializer/S4_check_notnull_macro.py")
-
+# print("Executing NayanSerializer/scripts/serializer/S4_check_notnull_macro.py")
+# print("Executing NayanSerializer/scripts/serializer/S4_check_notnull_macro.py")
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
@@ -21,29 +21,30 @@ sys.path.insert(0, script_dir)
 try:
     import S2_extract_dto_fields
 except ImportError as e:
-    print(f"Error: Could not import required modules: {e}")
-    print("Make sure S2_extract_dto_fields.py is in the same directory.")
+    # print(f"Error: Could not import required modules: {e}")
+    # print(f"Error: Could not import required modules: {e}")
     sys.exit(1)
 
 
 def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, str]]:
     """
-    Extract all member variables that have the //@NotNull annotation above them.
+    Extract all member variables that have the @NotNull annotation above them.
     
     Args:
         file_path: Path to the C++ file
         class_name: Name of the class
         
     Returns:
-        List of dictionaries with 'type', 'name', and 'access' keys for fields with NotNull macro
+        List of dictionaries with 'type', 'name', and 'access' keys for fields with @NotNull annotation
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        print(f"Error reading file: {e}")
-        return []
+        # print(f"Error reading file: {e}")
+        # print(f"Error reading file: {e}")
     
+        pass
     # Find class boundaries
     boundaries = S2_extract_dto_fields.find_class_boundaries(file_path, class_name)
     if not boundaries:
@@ -57,10 +58,8 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
-    # Pattern to match //@NotNull annotation (case-sensitive)
-    # Also check for /*@NotNull*/ (already processed, should be ignored)
-    notnull_annotation_pattern = r'^\s*//@NotNull\s*$'
-    notnull_processed_pattern = r'^\s*/\*@NotNull\*/\s*$'
+    # Pattern for /// @NotNull or ///@NotNull annotation (ignoring whitespace)
+    notnull_annotation_pattern = r'///\s*@NotNull\b'
     # Field pattern: matches "int a;", "Public optional<int> x;", "Private optional<int> x;", etc.
     # Handles both with and without Public/Private/Protected prefix
     field_pattern = r'^\s*(?:Public|Private|Protected)?\s*([A-Za-z_][A-Za-z0-9_<>*&,\s]*?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[;=]'
@@ -68,12 +67,11 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
     for i, line in enumerate(class_lines):
         stripped = line.strip()
         
-        # Skip already processed annotations (/*@AnnotationName*/)
-        if re.search(notnull_processed_pattern, stripped):
+        # Skip comments (but not the annotation itself which is in a comment)
+        if stripped.startswith('/*'):
             continue
-        
-        # Skip other comment types
-        if stripped.startswith('/*') and not stripped.startswith('//@'):
+        # Skip other single-line comments that aren't the annotation
+        if stripped.startswith('//') and not re.search(notnull_annotation_pattern, stripped):
             continue
         
         # Skip empty lines
@@ -86,15 +84,18 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
             current_access = access_match.group(1).lower()
             continue
         
-        # Check for //@NotNull annotation
+        # Check for @NotNull annotation (/// @NotNull or ///@NotNull)
         notnull_match = re.search(notnull_annotation_pattern, stripped)
         if notnull_match:
             # Look ahead for field declaration (within next 5 lines)
             for j in range(i + 1, min(i + 6, len(class_lines))):
                 next_line = class_lines[j].strip()
                 
-                # Skip comments
-                if next_line.startswith('//') or next_line.startswith('/*'):
+                # Skip comments (but not the annotation itself)
+                if next_line.startswith('/*'):
+                    continue
+                # Skip other single-line comments that aren't annotations
+                if next_line.startswith('//') and not re.search(r'///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\b', next_line):
                     continue
                 
                 # Skip empty lines
@@ -117,8 +118,7 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
                 
                 # Stop if we hit another annotation or access specifier
                 if next_line and (re.search(access_pattern, next_line, re.IGNORECASE) or 
-                                 re.search(r'^\s*//@', next_line) or
-                                 re.search(r'^\s*/\*@', next_line)):
+                                 re.search(r'^\s*(Dto|Serializable|COMPONENT|SCOPE|VALIDATE|///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable))\s*$', next_line)):
                     break
     
     return notnull_fields
@@ -127,7 +127,7 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
 def main():
     """Main function to handle command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Extract fields with //@NotNull annotation from a class"
+        description="Extract fields with @NotNull annotation from a class"
     )
     parser.add_argument(
         "file_path",
@@ -143,10 +143,10 @@ def main():
     
     fields = extract_notnull_fields(args.file_path, args.class_name)
     
-    print(f"NotNull fields found: {len(fields)}")
-    for field in fields:
-        print(f"  {field['type']} {field['name']} (access: {field['access']})")
-    
+    # print(f"@NotNull fields found: {len(fields)}")
+    # print(f"@NotNull fields found: {len(fields)}")
+        # print(f"  {field['type']} {field['name']} (access: {field['access']})")
+        # print(f"  {field['type']} {field['name']} (access: {field['access']})")
     return 0
 
 

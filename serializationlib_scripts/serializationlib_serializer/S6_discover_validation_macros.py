@@ -14,32 +14,32 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
-print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
-
-# Import get_client_files from arduinolib1_core
-# First, find the arduinolib1_scripts directory to add to path
+# print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
+# print("Executing NayanSerializer/scripts/serializer/S6_discover_validation_macros.py")
+# Import get_client_files from serializationlib_core
+# First, find the serializationlib_scripts directory to add to path
 try:
     script_file = os.path.abspath(__file__)
     current_dir = os.path.dirname(script_file)
-    # current_dir is arduinolib1_serializer/, so parent is arduinolib1_scripts/
-    arduinolib1_scripts_dir = os.path.dirname(current_dir)
+    # current_dir is serializationlib_serializer/, so parent is serializationlib_scripts/
+    serializationlib_scripts_dir = os.path.dirname(current_dir)
 except NameError:
     # __file__ not available, try to find from globals or search
-    arduinolib1_scripts_dir = None
+    serializationlib_scripts_dir = None
     if 'library_scripts_dir' in globals():
-        arduinolib1_scripts_dir = str(globals()['library_scripts_dir'])
+        serializationlib_scripts_dir = str(globals()['library_scripts_dir'])
     elif 'library_dir' in globals():
-        # library_dir is parent of arduinolib1_scripts
-        potential = os.path.join(str(globals()['library_dir']), 'arduinolib1_scripts')
+        # library_dir is parent of serializationlib_scripts
+        potential = os.path.join(str(globals()['library_dir']), 'serializationlib_scripts')
         if os.path.exists(potential):
-            arduinolib1_scripts_dir = potential
+            serializationlib_scripts_dir = potential
     else:
         # Search from current directory
         search_dir = os.getcwd()
         for _ in range(5):  # Search up to 5 levels
-            potential = os.path.join(search_dir, 'arduinolib1_scripts')
+            potential = os.path.join(search_dir, 'serializationlib_scripts')
             if os.path.exists(potential) and os.path.isdir(potential):
-                arduinolib1_scripts_dir = potential
+                serializationlib_scripts_dir = potential
                 break
             parent = os.path.dirname(search_dir)
             if parent == search_dir:  # Reached root
@@ -48,46 +48,37 @@ except NameError:
 
 # Add to path and import
 get_client_files = None
-if arduinolib1_scripts_dir and os.path.exists(arduinolib1_scripts_dir):
-    core_dir = os.path.join(arduinolib1_scripts_dir, 'arduinolib1_core')
+if serializationlib_scripts_dir and os.path.exists(serializationlib_scripts_dir):
+    core_dir = os.path.join(serializationlib_scripts_dir, 'serializationlib_core')
     if os.path.exists(core_dir):
         sys.path.insert(0, core_dir)
         try:
-            from arduinolib1_get_client_files import get_client_files
+            from serializationlib_get_client_files import get_client_files
         except ImportError as e:
-            print(f"Warning: Could not import get_client_files: {e}")
-    else:
-        print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
-else:
-    print(f"Warning: Could not find arduinolib1_scripts directory")
-
+            # print(f"Warning: Could not import get_client_files: {e}")
+            # print(f"Warning: Could not import get_client_files: {e}")
+            pass
+        # print(f"Warning: Could not find serializationlib_core directory at {core_dir}")
+        # print(f"Warning: Could not find serializationlib_core directory at {core_dir}")
+    # print(f"Warning: Could not find serializationlib_scripts directory")
+    # print(f"Warning: Could not find serializationlib_scripts directory")
 def find_validation_macro_definitions(search_directories: List[str] = None) -> Dict[str, str]:
     """
-    Discover all validation annotations.
-    Since we're using //@AnnotationName format instead of #define macros,
-    we return the known validation annotations with their function mappings.
+    Discover all validation macros by scanning files for the pattern:
+    #define MacroName /* Validation Function -> FunctionName */
+    
+    Supports both namespaced and non-namespaced function names:
+    - #define NotNull /* Validation Function -> DtoValidationUtility::ValidateNotNull */
+    - #define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
     
     Args:
-        search_directories: List of directories to search (ignored, kept for compatibility)
+        search_directories: List of directories to search (default: uses get_client_files for project_dir and library_dir)
         
     Returns:
-        Dictionary mapping annotation names to validation function names
-        Example: {'NotNull': 'nayan::validation::ValidationUtility::ValidateNotNull', ...}
+        Dictionary mapping macro names to validation function names
+        Example: {'NotNull': 'DtoValidationUtility::ValidateNotNull', 'NotEmpty': 'nayan::validation::DtoValidationUtility::ValidateNotEmpty'}
     """
-    # Known validation annotations and their corresponding validation functions
-    # These match the ValidationUtility class methods
-    validation_macros = {
-        'NotNull': 'nayan::validation::ValidationUtility::ValidateNotNull',
-        'NotBlank': 'nayan::validation::ValidationUtility::ValidateNotBlank',
-        'NotEmpty': 'nayan::validation::ValidationUtility::ValidateNotEmpty'
-    }
-    
-    # Return early with hardcoded annotations
-    return validation_macros
-    
-    # The code below is kept for reference but won't execute due to early return above
-    # In the future, we could scan source files for //@NotNull, //@NotBlank, //@NotEmpty usage
-    # to discover additional custom validation annotations
+    validation_macros = {}
     
     # Pattern to match: #define MacroName /* Validation Function -> FunctionName */
     # FunctionName can include namespaces (e.g., nayan::validation::DtoValidationUtility::ValidateNotNull)
@@ -117,8 +108,9 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                     project_header_files = get_client_files(project_dir, file_extensions=['.h', '.hpp'])
                     header_files.extend(project_header_files)
                 except Exception as e:
-                    print(f"Warning: Failed to get client files from project_dir: {e}")
-            
+                    # print(f"Warning: Failed to get client files from project_dir: {e}")
+                    # print(f"Warning: Failed to get client files from project_dir: {e}")
+                    pass
             # Get files from library_dir (all files, not just headers, since validation macros might be in any file)
             if library_dir:
                 try:
@@ -127,8 +119,9 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                     library_header_files = [f for f in library_files if f.endswith(('.h', '.hpp'))]
                     header_files.extend(library_header_files)
                 except Exception as e:
-                    print(f"Warning: Failed to get library files from library_dir: {e}")
-            
+                    # print(f"Warning: Failed to get library files from library_dir: {e}")
+                    # print(f"Warning: Failed to get library files from library_dir: {e}")
+                    pass
             search_directories = []  # Will use file list instead
         else:
             # Fallback: Check if client_files is available in global scope
@@ -138,8 +131,9 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
                 search_directories = []  # Will use file list instead
             else:
                 # Fallback to default directories
-                print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
-                search_directories = ['src', 'platform']
+                # print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
+                # print(f"Warning: get_client_files is None and no client_files in globals, using fallback directories")
+                pass
     else:
         # search_directories was provided, use directory-based search
         pass
@@ -230,17 +224,59 @@ def find_validation_macro_definitions(search_directories: List[str] = None) -> D
 
 def extract_validation_macros_from_file(file_path: str) -> Dict[str, str]:
     """
-    Extract validation annotation definitions from a specific file.
-    Since we're using //@AnnotationName format, this returns the known annotations.
+    Extract validation macro definitions from a specific file.
+    
+    Supports both namespaced and non-namespaced function names:
+    - #define NotNull /* Validation Function -> DtoValidationUtility::ValidateNotNull */
+    - #define NotNull /* Validation Function -> nayan::validation::DtoValidationUtility::ValidateNotNull */
     
     Args:
-        file_path: Path to the file to scan (ignored, kept for compatibility)
+        file_path: Path to the file to scan
         
     Returns:
-        Dictionary mapping annotation names to validation function names
+        Dictionary mapping macro names to validation function names
     """
-    # Return the same hardcoded validation annotations
-    return find_validation_macro_definitions()
+    validation_macros = {}
+    
+    if not os.path.exists(file_path):
+        return validation_macros
+    
+    # Pattern to match: #define MacroName /* Validation Function -> FunctionName */
+    # FunctionName can include namespaces (e.g., nayan::validation::DtoValidationUtility::ValidateNotNull)
+    pattern = r'#define\s+(\w+)\s+/\*\s*Validation\s+Function\s*->\s*([^\*]+?)\s*\*/'
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            
+        # Check each line (skip commented lines)
+        for line in lines:
+            # Skip lines that are commented out (single-line comments)
+            stripped = line.strip()
+            if stripped.startswith('//'):
+                continue
+            
+            # Skip lines that have // before the #define (inline comments)
+            # Check if there's a // before any potential #define
+            if '//' in line:
+                # Find position of // and #define
+                comment_pos = line.find('//')
+                define_pos = line.find('#define')
+                # If // comes before #define, skip this line
+                if define_pos != -1 and comment_pos != -1 and comment_pos < define_pos:
+                    continue
+            
+            # Find matches in non-commented lines
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                macro_name = match.group(1).strip()
+                function_name = match.group(2).strip()
+                validation_macros[macro_name] = function_name
+            
+    except Exception as e:
+        pass
+    
+    return validation_macros
 
 
 def main():
@@ -248,7 +284,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Discover validation annotations (returns known annotations)"
+        description="Discover validation macros from source files"
     )
     parser.add_argument(
         "--search-dirs",
@@ -268,10 +304,10 @@ def main():
         search_dirs = args.search_dirs if args.search_dirs else None
         macros = find_validation_macro_definitions(search_dirs)
     
-    print(f"Found {len(macros)} validation annotation(s):")
-    for macro_name, function_name in sorted(macros.items()):
-        print(f"  {macro_name} -> {function_name}")
-    
+    # print(f"Found {len(macros)} validation macro(s):")
+    # print(f"Found {len(macros)} validation macro(s):")
+        # print(f"  {macro_name} -> {function_name}")
+        # print(f"  {macro_name} -> {function_name}")
     return 0
 
 

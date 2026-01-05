@@ -12,8 +12,8 @@ import re
 from pathlib import Path
 from typing import List, Dict, Optional
 
-print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
-
+# print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
+# print("Executing NayanSerializer/scripts/serializer/S3_inject_serialization.py")
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
@@ -24,8 +24,8 @@ try:
     import S6_discover_validation_macros
     import S7_extract_validation_fields
 except ImportError as e:
-    print(f"Error: Could not import required modules: {e}")
-    print("Make sure S1_check_dto_macro.py, S2_extract_dto_fields.py, S6_discover_validation_macros.py, and S7_extract_validation_fields.py are in the same directory.")
+    # print(f"Error: Could not import required modules: {e}")
+    # print(f"Error: Could not import required modules: {e}")
     sys.exit(1)
 
 
@@ -88,10 +88,11 @@ def add_include_if_needed(file_path: str, include_path: str) -> bool:
         
         return True
     except Exception as e:
-        print(f"Error adding include: {e}")
-        return False
+        # print(f"Error adding include: {e}")
+        # print(f"Error adding include: {e}")
 
 
+        pass
 def is_optional_type(field_type: str) -> bool:
     """
     Check if a field type is an optional type.
@@ -203,6 +204,8 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     
     # Always generate validation function (even if empty) so nested objects can call it
     code_lines.append("        // Validation method for all validation macros")
+    code_lines.append("        #pragma GCC diagnostic push")
+    code_lines.append("        #pragma GCC diagnostic ignored \"-Wunused-parameter\"")
     code_lines.append(f"        Public template<typename DocType>")
     code_lines.append(f"        Static StdString ValidateFields(DocType& doc) {{")
     code_lines.append("        StdString validationErrors;")
@@ -268,6 +271,7 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     code_lines.append("")
     code_lines.append("        return validationErrors;")
     code_lines.append("    }")
+    code_lines.append("        #pragma GCC diagnostic pop")
     code_lines.append("")
     
     # Generate static Deserialize() method
@@ -403,17 +407,14 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
     return "\n".join(code_lines)
 
 
-def convert_annotation_to_processed(file_path: str, dry_run: bool = False, annotation_name: str = "Serializable") -> bool:
+def mark_dto_annotation_processed(file_path: str, dry_run: bool = False, serializable_annotation: str = "Serializable") -> bool:
     """
-    Convert //@AnnotationName to /*@AnnotationName*/ in a C++ file.
-    This marks the annotation as processed so it won't be processed again.
-    Checks for both //@Serializable and //@Entity annotations and converts whichever is found.
+    Replace the @Serializable or @Entity annotation with processed marker in a C++ file.
     
     Args:
         file_path: Path to the C++ file to modify
         dry_run: If True, only show what would be changed without making changes
-        annotation_name: Name of the annotation to convert (default: "Serializable")
-                        The function will check for both this annotation AND "Entity"
+        serializable_annotation: Name of the annotation identifier (Serializable -> @Serializable, _Entity -> @Entity)
         
     Returns:
         True if file was modified successfully or would be modified, False otherwise
@@ -422,73 +423,82 @@ def convert_annotation_to_processed(file_path: str, dry_run: bool = False, annot
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
         
+        # Determine annotation name based on annotation identifier
+        if serializable_annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif serializable_annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            # Default to @Serializable for backward compatibility
+            annotation_name = "@Serializable"
+        
         modified = False
         modified_lines = []
-        converted_annotations = []
         
-        # Check for both //@Serializable and //@Entity annotations
-        # Pattern to match //@AnnotationName (case-sensitive)
-        annotation_patterns = [
-            rf'^(\s*)//@({re.escape(annotation_name)})\s*$',  # Primary annotation
-            r'^(\s*)//@(Serializable)\s*$',  # Always check for Serializable
-            r'^(\s*)//@(Entity)\s*$'  # Always check for Entity
-        ]
+        # Pattern for processed annotation
+        processed_pattern = rf'^/\*\s*{re.escape(annotation_name)}\s*\*/\s*$'
+        # Pattern for annotation to process
+        annotation_pattern = rf'^///\s*{re.escape(annotation_name)}\s*$'
         
         for i, line in enumerate(lines):
             original_line = line
             stripped_line = line.strip()
             
-            # Skip already processed annotations (/*@AnnotationName*/)
-            if re.match(rf'^\s*/\*@{re.escape(annotation_name)}\*/\s*$', stripped_line) or \
-               re.match(r'^\s*/\*@Serializable\*/\s*$', stripped_line) or \
-               re.match(r'^\s*/\*@Entity\*/\s*$', stripped_line):
+            # Check if line is already processed (/* @Entity */ or /* @Serializable */)
+            if re.match(processed_pattern, stripped_line):
                 modified_lines.append(line)
                 continue
             
-            # Check if line contains any of the annotations
-            annotation_found = None
-            for pattern in annotation_patterns:
-                match = re.match(pattern, line)
-                if match:
-                    indent = match.group(1)
-                    annotation = match.group(2)
-                    # Convert to /*@AnnotationName*/
+            # Check if line contains /// @Entity or ///@Entity or /// @Serializable or ///@Serializable annotation
+            if re.match(annotation_pattern, stripped_line):
+                # Replace with processed marker, preserving original indentation
+                if line.startswith(' '):
+                    # Has indentation, preserve it
+                    indent = len(line) - len(line.lstrip())
                     if not dry_run:
-                        modified_lines.append(f'{indent}/*@{annotation}*/\n')
+                        modified_lines.append(' ' * indent + f'/* {annotation_name} */\n')
                     else:
                         modified_lines.append(line)  # Keep original for dry run display
-                    modified = True
-                    converted_annotations.append(annotation)
-                    if dry_run:
-                        print(f"    Would convert: {stripped_line} -> /*@{annotation}*/")
-                    break
-            
-            if annotation_found is None:
+                else:
+                    # No indentation
+                    if not dry_run:
+                        modified_lines.append(f'/* {annotation_name} */\n')
+                    else:
+                        modified_lines.append(line)  # Keep original for dry run display
+                modified = True
+                # if dry_run:
+                    # print(f"    Would mark as processed: {stripped_line}")
+            else:
                 modified_lines.append(line)
         
-        # Write back to file if modifications were made and not dry_run
+        # Write back to file if modifications were made and not dry run
         if modified and not dry_run:
             with open(file_path, 'w', encoding='utf-8') as file:
                 file.writelines(modified_lines)
-            if converted_annotations:
-                annotations_str = ", ".join(f"//@{ann}" for ann in set(converted_annotations))
-                print(f"✓ Converted {annotations_str} to processed format in: {file_path}")
-        elif modified and dry_run:
-            if converted_annotations:
-                annotations_str = ", ".join(f"//@{ann}" for ann in set(converted_annotations))
-                print(f"  Would convert {annotations_str} to processed format in: {file_path}")
-        elif not modified:
+            # print(f"✓ Marked {annotation_name} annotation as processed in: {file_path}")
+            # print(f"✓ Marked {annotation_name} annotation as processed in: {file_path}")
+            # print(f"  Would mark {annotation_name} annotation as processed in: {file_path}")
+            # print(f"  Would mark {annotation_name} annotation as processed in: {file_path}")
             # No annotation found (this is fine, might already be processed)
             pass
         
         return True
         
     except FileNotFoundError:
-        print(f"Error: File '{file_path}' not found")
+        # print(f"Error: File '{file_path}' not found")
+        # print(f"Error: File '{file_path}' not found")
         return False
     except Exception as e:
-        print(f"Error modifying file '{file_path}': {e}")
+        # print(f"Error modifying file '{file_path}': {e}")
+        # print(f"Error modifying file '{file_path}': {e}")
         return False
+# Backward compatibility alias
+def comment_dto_macro(file_path: str, dry_run: bool = False, serializable_macro: str = "Serializable") -> bool:
+    """
+    Deprecated: Use mark_dto_annotation_processed instead.
+    Replace the @Serializable or @Entity annotation with processed marker in a C++ file.
+    """
+    return mark_dto_annotation_processed(file_path, dry_run, serializable_macro)
 
 
 def inject_methods_into_class(file_path: str, class_name: str, methods_code: str, dry_run: bool = False) -> bool:
@@ -508,15 +518,15 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        print(f"Error reading file: {e}")
+        # print(f"Error reading file: {e}")
+        # print(f"Error reading file: {e}")
         return False
-    
     # Find class boundaries
     boundaries = S2_extract_dto_fields.find_class_boundaries(file_path, class_name)
     if not boundaries:
-        print(f"Error: Could not find class boundaries for {class_name}")
+        # print(f"Error: Could not find class boundaries for {class_name}")
+        # print(f"Error: Could not find class boundaries for {class_name}")
         return False
-    
     start_line, end_line = boundaries
     
     # Find the closing brace line (should be end_line)
@@ -526,12 +536,13 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
     # Check if methods already exist
     class_content = ''.join(lines[start_line - 1:end_line])
     if 'Serialize()' in class_content and 'Deserialize(' in class_content:
-        print(f"ℹ️  Serialization methods already exist in {class_name}")
+        # print(f"ℹ️  Serialization methods already exist in {class_name}")
+        # print(f"ℹ️  Serialization methods already exist in {class_name}")
+        # Methods already exist, return True without injecting again
         return True
-    
     if dry_run:
-        print(f"Would inject methods before line {end_line}:")
-        print(methods_code)
+        # print(f"Would inject methods before line {end_line}:")
+        # print(f"Would inject methods before line {end_line}:")
         return True
     
     # Insert methods before the closing brace
@@ -568,13 +579,13 @@ def inject_methods_into_class(file_path: str, class_name: str, methods_code: str
     try:
         with open(file_path, 'w', encoding='utf-8') as file:
             file.writelines(lines)
-        print(f"✅ Injected serialization methods into {class_name}")
+        # print(f"✅ Injected serialization methods into {class_name}")
+        # print(f"✅ Injected serialization methods into {class_name}")
         return True
     except Exception as e:
-        print(f"Error writing file: {e}")
+        # print(f"Error writing file: {e}")
+        # print(f"Error writing file: {e}")
         return False
-
-
 def main():
     """Main function to handle command line arguments and inject serialization methods."""
     parser = argparse.ArgumentParser(
@@ -596,48 +607,51 @@ def main():
     dto_info = S1_check_dto_macro.check_dto_macro(args.file_path)
     
     if not dto_info or not dto_info.get('has_dto'):
-        print("❌ Error: Class does not have //@Serializable annotation")
-        return 1
+        # print("❌ Error: Class does not have Serializable macro")
+        # print("❌ Error: Class does not have Serializable macro")
     
+        pass
     class_name = dto_info['class_name']
-    print(f"✅ Found //@Serializable class: {class_name}")
-    
+    # print(f"✅ Found Serializable class: {class_name}")
+    # print(f"✅ Found Serializable class: {class_name}")
     # Extract fields (all access levels: public, private, protected, or no specifier)
     fields = S2_extract_dto_fields.extract_all_fields(args.file_path, class_name)
     
     if not fields:
-        print("⚠️  Warning: No fields found in class")
-        return 1
+        # print("⚠️  Warning: No fields found in class")
+        # print("⚠️  Warning: No fields found in class")
     
+        pass
     # Separate optional and non-optional fields
     optional_fields = [field for field in fields if is_optional_type(field['type'].strip())]
     non_optional_fields = [field for field in fields if not is_optional_type(field['type'].strip())]
     
-    print(f"📋 Found {len(fields)} field(s) total:")
-    if optional_fields:
-        print(f"   ✅ {len(optional_fields)} optional field(s) (will be serialized):")
-        for field in optional_fields:
-            print(f"      {field['type']} {field['name']}")
-    if non_optional_fields:
-        print(f"   ⏭️  {len(non_optional_fields)} non-optional field(s) (will be skipped):")
-        for field in non_optional_fields:
-            print(f"      {field['type']} {field['name']}")
-    
+    # print(f"📋 Found {len(fields)} field(s) total:")
+    # print(f"📋 Found {len(fields)} field(s) total:")
+        # print(f"   ✅ {len(optional_fields)} optional field(s) (will be serialized):")
+        # print(f"   ✅ {len(optional_fields)} optional field(s) (will be serialized):")
+            # print(f"      {field['type']} {field['name']}")
+            # print(f"      {field['type']} {field['name']}")
+        # print(f"   ⏭️  {len(non_optional_fields)} non-optional field(s) (will be skipped):")
+        # print(f"   ⏭️  {len(non_optional_fields)} non-optional field(s) (will be skipped):")
+            # print(f"      {field['type']} {field['name']}")
+            # print(f"      {field['type']} {field['name']}")
     # Check if any fields are optional
     has_optional_fields = len(optional_fields) > 0
     
-    if not has_optional_fields:
-        print("⚠️  Warning: No optional fields found. Serialization methods will be empty.")
+    # if not has_optional_fields:
+        # print("⚠️  Warning: No optional fields found. Serialization methods will be empty.")
     
     # Discover validation macros from source files
     # Pass None to use client_files from 05_list_client_files.py
     validation_macros = S6_discover_validation_macros.find_validation_macro_definitions(None)
     
     if validation_macros:
-        print(f"🔍 Discovered {len(validation_macros)} validation macro(s):")
-        for macro_name, function_name in sorted(validation_macros.items()):
-            print(f"   {macro_name} -> {function_name}")
-    
+        # print(f"🔍 Discovered {len(validation_macros)} validation macro(s):")
+        # print(f"🔍 Discovered {len(validation_macros)} validation macro(s):")
+            # print(f"   {macro_name} -> {function_name}")
+            # print(f"   {macro_name} -> {function_name}")
+        pass
     # Extract fields with validation macros (generic approach)
     validation_fields_by_macro = S7_extract_validation_fields.extract_validation_fields(
         args.file_path, class_name, validation_macros
@@ -645,12 +659,12 @@ def main():
     
     if validation_fields_by_macro:
         total_validated = sum(len(fields) for fields in validation_fields_by_macro.values())
-        print(f"   🔒 {total_validated} field(s) with validation macros (will be validated):")
-        for macro_name, fields_list in sorted(validation_fields_by_macro.items()):
-            print(f"      {macro_name} ({len(fields_list)} field(s)):")
-            for field in fields_list:
-                print(f"         {field['type']} {field['name']} (access: {field['access']})")
-    
+        # print(f"   🔒 {total_validated} field(s) with validation macros (will be validated):")
+        # print(f"   🔒 {total_validated} field(s) with validation macros (will be validated):")
+            # print(f"      {macro_name} ({len(fields_list)} field(s)):")
+            # print(f"      {macro_name} ({len(fields_list)} field(s)):")
+                # print(f"         {field['type']} {field['name']} (access: {field['access']})")
+                # print(f"         {field['type']} {field['name']} (access: {field['access']})")
     # Generate methods code
     methods_code = generate_serialization_methods(class_name, fields, validation_fields_by_macro)
     
@@ -668,21 +682,39 @@ def main():
     if not success:
         return 1
     
-    # Convert //@Serializable to /*@Serializable*/ after successful injection
-    # Get annotation name from environment or use default
-    annotation_name = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
+    # Mark annotation as processed after successful injection
+    # Get serializable_annotation from environment or use default
+    serializable_annotation = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
     if not args.dry_run:
-        print(f"  Converting //@{annotation_name} to /*@{annotation_name}*/ in: {args.file_path}")
+        # Determine annotation name for display
+        if serializable_annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif serializable_annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            annotation_name = "@Serializable"
+        # print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
+        # print(f"  Marking {annotation_name} annotation as processed in: {args.file_path}")
+        # Actually mark the annotation as processed
+        mark_dto_annotation_processed(args.file_path, dry_run=False, serializable_annotation=serializable_annotation)
     else:
-        print(f"  Would convert //@{annotation_name} to /*@{annotation_name}*/ in: {args.file_path}")
-    convert_annotation_to_processed(args.file_path, dry_run=args.dry_run, annotation_name=annotation_name)
+        # Determine annotation name for display
+        if serializable_annotation == "_Entity":
+            annotation_name = "@Entity"
+        elif serializable_annotation == "Serializable":
+            annotation_name = "@Serializable"
+        else:
+            annotation_name = "@Serializable"
+        # print(f"  Would mark {annotation_name} annotation as processed in: {args.file_path}")
+        # print(f"  Would mark {annotation_name} annotation as processed in: {args.file_path}")
     
     if args.dry_run:
-        print("\n🔍 DRY RUN MODE - Generated methods code:")
-        print("="*70)
-        print(methods_code)
-        print("="*70)
+        # print("\n🔍 DRY RUN MODE - Generated methods code:")
+        # print("\n🔍 DRY RUN MODE - Generated methods code:")
+        # print(methods_code)
+        # print(methods_code)
     
+        pass
     return 0
 
 
@@ -693,7 +725,8 @@ __all__ = [
     'is_optional_type',
     'extract_inner_type_from_optional',
     'generate_serialization_methods',
-    'convert_annotation_to_processed',
+    'mark_dto_annotation_processed',
+    'comment_dto_macro',  # Keep for backward compatibility
     'inject_methods_into_class',
     'main'
 ]

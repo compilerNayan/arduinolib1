@@ -2,7 +2,7 @@
 """
 00 Process Serializable Classes Script
 
-Orchestrator script that processes all classes with Serializable macro in client files.
+Orchestrator script that processes all classes with @Serializable annotation in client files.
 Uses 05_list_client_files.py to get the list of client files.
 """
 
@@ -10,32 +10,32 @@ import os
 import sys
 import importlib.util
 
-print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
-
-# Import get_client_files from arduinolib1_core
-# First, find the arduinolib1_scripts directory to add to path
+# print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
+# print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
+# Import get_client_files from serializationlib_core
+# First, find the serializationlib_scripts directory to add to path
 try:
     script_file = os.path.abspath(__file__)
     current_dir = os.path.dirname(script_file)
-    # current_dir is arduinolib1_serializer/, so parent is arduinolib1_scripts/
-    arduinolib1_scripts_dir = os.path.dirname(current_dir)
+    # current_dir is serializationlib_serializer/, so parent is serializationlib_scripts/
+    serializationlib_scripts_dir = os.path.dirname(current_dir)
 except NameError:
     # __file__ not available, try to find from globals or search
-    arduinolib1_scripts_dir = None
+    serializationlib_scripts_dir = None
     if 'library_scripts_dir' in globals():
-        arduinolib1_scripts_dir = str(globals()['library_scripts_dir'])
+        serializationlib_scripts_dir = str(globals()['library_scripts_dir'])
     elif 'library_dir' in globals():
-        # library_dir is parent of arduinolib1_scripts
-        potential = os.path.join(str(globals()['library_dir']), 'arduinolib1_scripts')
+        # library_dir is parent of serializationlib_scripts
+        potential = os.path.join(str(globals()['library_dir']), 'serializationlib_scripts')
         if os.path.exists(potential):
-            arduinolib1_scripts_dir = potential
+            serializationlib_scripts_dir = potential
     else:
         # Search from current directory
         search_dir = os.getcwd()
         for _ in range(5):  # Search up to 5 levels
-            potential = os.path.join(search_dir, 'arduinolib1_scripts')
+            potential = os.path.join(search_dir, 'serializationlib_scripts')
             if os.path.exists(potential) and os.path.isdir(potential):
-                arduinolib1_scripts_dir = potential
+                serializationlib_scripts_dir = potential
                 break
             parent = os.path.dirname(search_dir)
             if parent == search_dir:  # Reached root
@@ -44,19 +44,20 @@ except NameError:
 
 # Add to path and import
 get_client_files = None
-if arduinolib1_scripts_dir and os.path.exists(arduinolib1_scripts_dir):
-    core_dir = os.path.join(arduinolib1_scripts_dir, 'arduinolib1_core')
+if serializationlib_scripts_dir and os.path.exists(serializationlib_scripts_dir):
+    core_dir = os.path.join(serializationlib_scripts_dir, 'serializationlib_core')
     if os.path.exists(core_dir):
         sys.path.insert(0, core_dir)
         try:
-            from arduinolib1_get_client_files import get_client_files
+            from serializationlib_get_client_files import get_client_files
         except ImportError as e:
-            print(f"Warning: Could not import get_client_files: {e}")
-    else:
-        print(f"Warning: Could not find arduinolib1_core directory at {core_dir}")
-else:
-    print(f"Warning: Could not find arduinolib1_scripts directory")
-
+            # print(f"Warning: Could not import get_client_files: {e}")
+            # print(f"Warning: Could not import get_client_files: {e}")
+            pass
+        # print(f"Warning: Could not find serializationlib_core directory at {core_dir}")
+        # print(f"Warning: Could not find serializationlib_core directory at {core_dir}")
+    # print(f"Warning: Could not find serializationlib_scripts directory")
+    # print(f"Warning: Could not find serializationlib_scripts directory")
 # Import the serializer scripts
 # Determine script_dir - where this script and other serializer scripts are located
 try:
@@ -72,7 +73,8 @@ except NameError:
         # script_dir is scripts/core/, so go up one level to scripts/, then to serializer/
         scripts_parent = os.path.dirname(globals()['script_dir'])
         candidate = os.path.join(scripts_parent, 'serializer')
-        print(f"DEBUG: Method 1 - script_dir={globals()['script_dir']}, scripts_parent={scripts_parent}, candidate={candidate}, exists={os.path.exists(candidate)}")
+        # print(f"DEBUG: Method 1 - script_dir={globals()['script_dir']}, scripts_parent={scripts_parent}, candidate={candidate}, exists={os.path.exists(candidate)}")
+        # print(f"DEBUG: Method 1 - script_dir={globals()['script_dir']}, scripts_parent={scripts_parent}, candidate={candidate}, exists={os.path.exists(candidate)}")
         if os.path.exists(candidate):
             script_dir = candidate
     
@@ -149,14 +151,14 @@ if not os.path.exists(script_dir) or not os.path.exists(os.path.join(script_dir,
     
     # Final check
     if not os.path.exists(script_dir) or not os.path.exists(os.path.join(script_dir, "S1_check_dto_macro.py")):
-        print(f"Error: Could not find serializer directory at {script_dir}")
-        print(f"  Available globals: {[k for k in globals().keys() if 'dir' in k.lower() or 'script' in k.lower()]}")
-        if 'initial_script_dir' in globals():
-            print(f"  initial_script_dir: {globals()['initial_script_dir']}")
-        if 'script_dir' in globals():
-            print(f"  script_dir: {globals()['script_dir']}")
-        if 'lib_dir' in globals():
-            print(f"  lib_dir: {globals()['lib_dir']}")
+        # print(f"Error: Could not find serializer directory at {script_dir}")
+        # print(f"Error: Could not find serializer directory at {script_dir}")
+        # if 'initial_script_dir' in globals():
+        #     print(f"  initial_script_dir: {globals()['initial_script_dir']}")
+        # if 'script_dir' in globals():
+        #     print(f"  script_dir: {globals()['script_dir']}")
+        # if 'lib_dir' in globals():
+        #     print(f"  lib_dir: {globals()['lib_dir']}")
         raise FileNotFoundError(f"Serializer directory not found: {script_dir}")
 
 sys.path.insert(0, script_dir)
@@ -164,11 +166,12 @@ sys.path.insert(0, script_dir)
 # Import serializer modules
 s1_path = os.path.join(script_dir, "S1_check_dto_macro.py")
 if not os.path.exists(s1_path):
-    print(f"Error: Could not find S1_check_dto_macro.py at {s1_path}")
-    print(f"  script_dir: {script_dir}")
-    print(f"  Files in script_dir: {os.listdir(script_dir) if os.path.exists(script_dir) else 'directory does not exist'}")
-    raise FileNotFoundError(f"S1_check_dto_macro.py not found at {s1_path}")
+    # print(f"Error: Could not find S1_check_dto_macro.py at {s1_path}")
+    # print(f"Error: Could not find S1_check_dto_macro.py at {s1_path}")
+    # print(f"  Files in script_dir: {os.listdir(script_dir) if os.path.exists(script_dir) else 'directory does not exist'}")
+    # print(f"  Files in script_dir: {os.listdir(script_dir) if os.path.exists(script_dir) else 'directory does not exist'}")
 
+    pass
 spec_s1 = importlib.util.spec_from_file_location("S1_check_dto_macro", s1_path)
 S1_check_dto_macro = importlib.util.module_from_spec(spec_s1)
 spec_s1.loader.exec_module(S1_check_dto_macro)
@@ -180,11 +183,11 @@ spec_s3.loader.exec_module(S3_inject_serialization)
 
 def process_all_serializable_classes(dry_run=False, serializable_macro=None):
     """
-    Process all client files that contain classes with Serializable macro.
+    Process all client files that contain classes with @Serializable annotation.
     
     Args:
         dry_run: If True, show what would be processed without modifying files
-        serializable_macro: Name of the macro to search for (default: "Serializable" or from environment)
+        serializable_macro: Name of the annotation (kept for backward compatibility, but now looks for @Serializable)
         
     Returns:
         Number of files processed
@@ -198,8 +201,8 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         else:
             serializable_macro = "Serializable"
     
-    print(f"Using serializable macro: {serializable_macro}")
-    
+    # print(f"Using serializable macro: {serializable_macro}")
+    # print(f"Using serializable macro: {serializable_macro}")
     # Get project_dir from globals or environment
     project_dir = None
     if 'project_dir' in globals():
@@ -210,26 +213,30 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         project_dir = os.environ['CMAKE_PROJECT_DIR']
     
     if not project_dir:
-        print("Error: project_dir not available. Cannot determine client project directory.")
-        return 0
+        # print("Error: project_dir not available. Cannot determine client project directory.")
+        # print("Error: project_dir not available. Cannot determine client project directory.")
     
+        pass
     # Get client header files using get_client_files function
     if get_client_files is None:
-        print("Error: get_client_files function not available.")
-        return 0
+        # print("Error: get_client_files function not available.")
+        # print("Error: get_client_files function not available.")
     
+        pass
     try:
         header_files = get_client_files(project_dir, file_extensions=['.h', '.hpp'])
     except Exception as e:
-        print(f"Error: Failed to get client files: {e}")
-        return 0
+        # print(f"Error: Failed to get client files: {e}")
+        # print(f"Error: Failed to get client files: {e}")
     
+        pass
     if not header_files:
-        print("ℹ️  No client header files found")
-        return 0
+        # print("ℹ️  No client header files found")
+        # print("ℹ️  No client header files found")
     
-    print(f"🔍 Scanning {len(header_files)} header file(s) for Serializable classes...")
-    
+        pass
+    # print(f"🔍 Scanning {len(header_files)} header file(s) for Serializable classes...")
+    # print(f"🔍 Scanning {len(header_files)} header file(s) for Serializable classes...")
     processed_count = 0
     
     # Process each header file
@@ -237,15 +244,15 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         if not os.path.exists(file_path):
             continue
         
-        # Check if file has Serializable macro
+        # Check if file has @Serializable annotation
         dto_info = S1_check_dto_macro.check_dto_macro(file_path, serializable_macro)
         
         if not dto_info or not dto_info.get('has_dto'):
             continue
         
         class_name = dto_info['class_name']
-        print(f"\n📝 Processing {os.path.basename(file_path)}: {class_name}")
-        
+        # print(f"\n📝 Processing {os.path.basename(file_path)}: {class_name}")
+        # print(f"\n📝 Processing {os.path.basename(file_path)}: {class_name}")
         # Extract fields
         import S2_extract_dto_fields
         spec_s2 = importlib.util.spec_from_file_location("S2_extract_dto_fields", os.path.join(script_dir, "S2_extract_dto_fields.py"))
@@ -255,15 +262,16 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         fields = S2_extract_dto_fields.extract_all_fields(file_path, class_name)
         
         if not fields:
-            print(f"⚠️  Warning: No fields found in {class_name}")
-            continue
+            # print(f"⚠️  Warning: No fields found in {class_name}")
+            # print(f"⚠️  Warning: No fields found in {class_name}")
         
+            pass
         # Separate optional and non-optional fields
         optional_fields = [field for field in fields if S3_inject_serialization.is_optional_type(field['type'].strip())]
         non_optional_fields = [field for field in fields if not S3_inject_serialization.is_optional_type(field['type'].strip())]
         
-        print(f"   Found {len(fields)} field(s): {len(optional_fields)} optional, {len(non_optional_fields)} non-optional")
-        
+        # print(f"   Found {len(fields)} field(s): {len(optional_fields)} optional, {len(non_optional_fields)} non-optional")
+        # print(f"   Found {len(fields)} field(s): {len(optional_fields)} optional, {len(non_optional_fields)} non-optional")
         # Discover validation macros
         import S6_discover_validation_macros
         spec_s6 = importlib.util.spec_from_file_location("S6_discover_validation_macros", os.path.join(script_dir, "S6_discover_validation_macros.py"))
@@ -272,8 +280,8 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         
         validation_macros = S6_discover_validation_macros.find_validation_macro_definitions(None)
         
-        if validation_macros:
-            print(f"   Discovered {len(validation_macros)} validation macro(s)")
+        # if validation_macros:
+            # print(f"   Discovered {len(validation_macros)} validation macro(s)")
         
         # Extract validation fields
         import S7_extract_validation_fields
@@ -287,8 +295,8 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         
         if validation_fields_by_macro:
             total_validated = sum(len(fields) for fields in validation_fields_by_macro.values())
-            print(f"   {total_validated} field(s) with validation macros")
-        
+            # print(f"   {total_validated} field(s) with validation macros")
+            # print(f"   {total_validated} field(s) with validation macros")
         # Generate and inject methods
         methods_code = S3_inject_serialization.generate_serialization_methods(class_name, fields, validation_fields_by_macro)
         
@@ -302,17 +310,16 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         success = S3_inject_serialization.inject_methods_into_class(file_path, class_name, methods_code, dry_run=dry_run)
         
         if success:
-            # Convert //@Serializable or //@Entity to /*@Serializable*/ or /*@Entity*/ after successful injection
-            # Use the actual annotation name that was found in the file
-            found_annotation = dto_info.get('annotation_name', serializable_macro)
+            # Mark @Serializable annotation as processed
             if not dry_run:
-                # Convert the annotation that was actually found
-                S3_inject_serialization.convert_annotation_to_processed(file_path, dry_run=False, annotation_name=found_annotation)
+                S3_inject_serialization.comment_dto_macro(file_path, dry_run=False, serializable_macro=serializable_macro)
             processed_count += 1
-            print(f"   ✅ Successfully processed {class_name}")
+            # print(f"   ✅ Successfully processed {class_name}")
+            # print(f"   ✅ Successfully processed {class_name}")
         else:
-            print(f"   ❌ Failed to process {class_name}")
-    
+            # print(f"   ❌ Failed to process {class_name}")
+            # print(f"   ❌ Failed to process {class_name}")
+            pass
     return processed_count
 
 
@@ -328,10 +335,12 @@ def main():
     processed_count = process_all_serializable_classes(dry_run=False, serializable_macro=serializable_macro)
     
     if processed_count > 0:
-        print(f"\n✅ Successfully processed {processed_count} file(s) with Serializable classes")
+        # print(f"\n✅ Successfully processed {processed_count} file(s) with Serializable classes")
+        pass
     else:
-        print("\nℹ️  No files with Serializable classes found")
-    
+        # print("\nℹ️  No files with Serializable classes found")
+        # print("\nℹ️  No files with Serializable classes found")
+        pass
     return 0
 
 

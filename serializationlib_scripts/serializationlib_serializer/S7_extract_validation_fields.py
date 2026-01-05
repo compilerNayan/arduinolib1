@@ -2,7 +2,7 @@
 """
 S7 Extract Validation Fields Script
 
-Generic script to extract fields with any validation macro.
+Generic script to extract fields with any validation annotation.
 Uses discovered validation macros to find fields with validation annotations.
 """
 
@@ -12,8 +12,8 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional, Set
 
-print("Executing NayanSerializer/scripts/serializer/S7_extract_validation_fields.py")
-
+# print("Executing NayanSerializer/scripts/serializer/S7_extract_validation_fields.py")
+# print("Executing NayanSerializer/scripts/serializer/S7_extract_validation_fields.py")
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
@@ -22,8 +22,8 @@ try:
     import S2_extract_dto_fields
     import S6_discover_validation_macros
 except ImportError as e:
-    print(f"Error: Could not import required modules: {e}")
-    print("Make sure S2_extract_dto_fields.py and S6_discover_validation_macros.py are in the same directory.")
+    # print(f"Error: Could not import required modules: {e}")
+    # print(f"Error: Could not import required modules: {e}")
     sys.exit(1)
 
 
@@ -81,24 +81,25 @@ def get_validation_function_info(validation_macros: Dict[str, str], macro_name: 
 
 def extract_validation_fields(file_path: str, class_name: str, validation_macros: Dict[str, str]) -> Dict[str, List[Dict[str, str]]]:
     """
-    Extract all fields with validation macros.
+    Extract all fields with validation annotations.
     
     Args:
         file_path: Path to the C++ file
         class_name: Name of the class
-        validation_macros: Dictionary mapping macro names to function names
+        validation_macros: Dictionary mapping annotation names (e.g., 'NotNull') to function names
         
     Returns:
-        Dictionary mapping validation macro names to lists of fields
+        Dictionary mapping validation annotation names to lists of fields
         Example: {'NotNull': [{'type': 'optional<int>', 'name': 'a', 'access': 'none'}], ...}
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        print(f"Error reading file: {e}")
-        return {}
+        # print(f"Error reading file: {e}")
+        # print(f"Error reading file: {e}")
     
+        pass
     # Find class boundaries
     boundaries = S2_extract_dto_fields.find_class_boundaries(file_path, class_name)
     if not boundaries:
@@ -112,11 +113,15 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
     if not macro_names:
         return {}
     
-    # Create pattern to match any validation annotation //@AnnotationName (case-sensitive)
-    # Also check for already processed annotations /*@AnnotationName*/ (should be ignored)
-    macro_pattern = '|'.join(re.escape(macro) for macro in macro_names)
-    validation_annotation_pattern = rf'^\s*//@({macro_pattern})\s*$'
-    validation_processed_pattern = rf'^\s*/\*@({macro_pattern})\*/\s*$'
+    # Create pattern to match any validation annotation (/// @NotNull, /// @NotEmpty, /// @NotBlank, etc.)
+    # Map macro names to annotation patterns (e.g., 'NotNull' -> '@NotNull')
+    annotation_patterns = {}
+    for macro_name in macro_names:
+        annotation_patterns[macro_name] = rf'///\s*@{re.escape(macro_name)}\b'
+    
+    # Combined pattern to match any validation annotation
+    all_annotations = '|'.join(annotation_patterns.values())
+    validation_pattern = rf'({all_annotations})'
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
@@ -132,13 +137,12 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
         line = class_lines[i]
         stripped = line.strip()
         
-        # Skip already processed annotations (/*@AnnotationName*/)
-        if re.search(validation_processed_pattern, stripped):
+        # Skip comments (but not the annotation itself which is in a comment)
+        if stripped.startswith('/*'):
             i += 1
             continue
-        
-        # Skip other comment types (but not //@ annotations)
-        if stripped.startswith('/*') and not stripped.startswith('//@'):
+        # Skip other single-line comments that aren't annotations
+        if stripped.startswith('//') and not re.search(validation_pattern, stripped):
             i += 1
             continue
         
@@ -154,66 +158,71 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
             i += 1
             continue
         
-        # Check for validation annotation //@AnnotationName
-        validation_match = re.search(validation_annotation_pattern, stripped)
+        # Check for validation annotation
+        validation_match = re.search(validation_pattern, stripped)
         if validation_match:
-            macro_name = validation_match.group(1)
-            validation_info = get_validation_function_info(validation_macros, macro_name)
+            # Find which annotation was matched
+            matched_annotation = None
+            for macro_name, pattern in annotation_patterns.items():
+                if re.search(pattern, stripped):
+                    matched_annotation = macro_name
+                    break
             
-            if validation_info:
-                # Look ahead for field declaration (within next 10 lines, may have other macros in between)
-                found_field = False
-                for j in range(i + 1, min(i + 11, len(class_lines))):
-                    next_line = class_lines[j].strip()
-                    
-                    # Skip already processed annotations
-                    if re.search(validation_processed_pattern, next_line):
-                        continue
-                    
-                    # Skip other comment types (but not //@ annotations)
-                    if next_line.startswith('/*') and not next_line.startswith('//@'):
-                        continue
-                    
-                    # Skip empty lines
-                    if not next_line:
-                        continue
-                    
-                    # Skip other validation annotations (can appear between validation annotation and field)
-                    if re.search(validation_annotation_pattern, next_line):
-                        continue
-                    
-                    # Check for field declaration
-                    field_match = re.search(field_pattern, next_line)
-                    if field_match:
-                        field_type = field_match.group(1).strip()
-                        field_name = field_match.group(2).strip()
-                        # Skip if it looks like a method declaration
-                        if '(' not in next_line and ')' not in next_line and field_name not in ['public', 'private', 'protected']:
-                            # Check if validation requires string type
-                            if validation_info['requires_string_type']:
-                                if is_string_type(field_type):
-                                    result[macro_name].append({
+            if matched_annotation:
+                validation_info = get_validation_function_info(validation_macros, matched_annotation)
+                
+                if validation_info:
+                    # Look ahead for field declaration (within next 10 lines, may have other annotations in between)
+                    found_field = False
+                    for j in range(i + 1, min(i + 11, len(class_lines))):
+                        next_line = class_lines[j].strip()
+                        
+                        # Skip comments (but not the annotation itself)
+                        if next_line.startswith('/*'):
+                            continue
+                        # Skip other single-line comments that aren't annotations
+                        if next_line.startswith('//') and not re.search(r'///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\b', next_line):
+                            continue
+                        
+                        # Skip empty lines
+                        if not next_line:
+                            continue
+                        
+                        # Skip other validation annotations (can appear between validation annotation and field)
+                        if re.search(validation_pattern, next_line):
+                            continue
+                        
+                        # Check for field declaration
+                        field_match = re.search(field_pattern, next_line)
+                        if field_match:
+                            field_type = field_match.group(1).strip()
+                            field_name = field_match.group(2).strip()
+                            # Skip if it looks like a method declaration
+                            if '(' not in next_line and ')' not in next_line and field_name not in ['public', 'private', 'protected']:
+                                # Check if validation requires string type
+                                if validation_info['requires_string_type']:
+                                    if is_string_type(field_type):
+                                        result[matched_annotation].append({
+                                            'type': field_type,
+                                            'name': field_name,
+                                            'access': current_access if current_access else 'none',
+                                            'function_name': validation_info['function_name']
+                                        })
+                                else:
+                                    # No type restriction
+                                    result[matched_annotation].append({
                                         'type': field_type,
                                         'name': field_name,
                                         'access': current_access if current_access else 'none',
                                         'function_name': validation_info['function_name']
                                     })
-                            else:
-                                # No type restriction
-                                result[macro_name].append({
-                                    'type': field_type,
-                                    'name': field_name,
-                                    'access': current_access if current_access else 'none',
-                                    'function_name': validation_info['function_name']
-                                })
-                            found_field = True
-                        break
-                    
-                    # Stop if we hit another annotation or access specifier
-                    if next_line and (re.search(access_pattern, next_line, re.IGNORECASE) or 
-                                     re.search(r'^\s*//@', next_line) or
-                                     re.search(r'^\s*/\*@', next_line)):
-                        break
+                                found_field = True
+                            break
+                        
+                        # Stop if we hit another annotation or access specifier
+                        if next_line and (re.search(access_pattern, next_line, re.IGNORECASE) or 
+                                         re.search(r'^\s*(Dto|Serializable|COMPONENT|SCOPE|VALIDATE|///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable))\s*$', next_line)):
+                            break
             
             i += 1
             continue
@@ -229,7 +238,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Extract fields with validation macros from a class"
+        description="Extract fields with validation annotations from a class"
     )
     parser.add_argument(
         "file_path",
@@ -253,18 +262,19 @@ def main():
     validation_macros = S6_discover_validation_macros.find_validation_macro_definitions(args.search_dirs)
     
     if not validation_macros:
-        print("No validation macros found")
-        return 1
+        # print("No validation macros found")
+        # print("No validation macros found")
     
+        pass
     # Extract fields
     fields_by_macro = extract_validation_fields(args.file_path, args.class_name, validation_macros)
     
-    print(f"Validation fields found: {sum(len(v) for v in fields_by_macro.values())}")
-    for macro_name, fields in fields_by_macro.items():
-        print(f"  {macro_name} ({len(fields)} field(s)):")
-        for field in fields:
-            print(f"    {field['type']} {field['name']} (access: {field['access']}, function: {field['function_name']})")
-    
+    # print(f"Validation fields found: {sum(len(v) for v in fields_by_macro.values())}")
+    # print(f"Validation fields found: {sum(len(v) for v in fields_by_macro.values())}")
+        # print(f"  {macro_name} ({len(fields)} field(s)):")
+        # print(f"  {macro_name} ({len(fields)} field(s)):")
+            # print(f"    {field['type']} {field['name']} (access: {field['access']}, function: {field['function_name']})")
+            # print(f"    {field['type']} {field['name']} (access: {field['access']}, function: {field['function_name']})")
     return 0
 
 

@@ -1,14 +1,14 @@
 # Print message immediately when script is loaded
-print("Hello cool dudes normal")
-
+# print("Hello cool dudes normal")
+# print("Hello cool dudes normal")
 # Import PlatformIO environment first (if available)
 env = None
 try:
     Import("env")
 except NameError:
     # Not running in PlatformIO environment (e.g., running from CMake)
-    print("Note: Not running in PlatformIO environment - some features may be limited")
-    # Create a mock env object for CMake builds
+    # print("Note: Not running in PlatformIO environment - some features may be limited")
+    # print("Note: Not running in PlatformIO environment - some features may be limited")
     class MockEnv:
         def get(self, key, default=None):
             return default
@@ -21,10 +21,10 @@ from pathlib import Path
 
 def get_library_dir():
     """
-    Find the arduinolib1_scripts directory by searching up the directory tree.
+    Find the serializationlib_scripts directory by searching up the directory tree.
     
     Returns:
-        Path: Path to the arduinolib1_scripts directory
+        Path: Path to the serializationlib_scripts directory
         
     Raises:
         ImportError: If the directory cannot be found
@@ -32,15 +32,16 @@ def get_library_dir():
     cwd = Path(os.getcwd())
     current = cwd
     for _ in range(10):  # Search up to 10 levels
-        potential = current / "arduinolib1_scripts"
+        potential = current / "serializationlib_scripts"
         if potential.exists() and potential.is_dir():
-            print(f"✓ Found library path by searching up directory tree: {potential}")
+            # print(f"✓ Found library path by searching up directory tree: {potential}")
+            # print(f"✓ Found library path by searching up directory tree: {potential}")
             return potential
         parent = current.parent
         if parent == current:  # Reached filesystem root
             break
         current = parent
-    raise ImportError("Could not find arduinolib1_scripts directory")
+    raise ImportError("Could not find serializationlib_scripts directory")
 
 
 def get_project_dir():
@@ -60,17 +61,18 @@ def get_project_dir():
         project_dir = os.environ.get("CMAKE_PROJECT_DIR", None)
     
     if project_dir:
-        print(f"\nClient project directory: {project_dir}")
+        # print(f"\nClient project directory: {project_dir}")
+        pass
     else:
-        print("Warning: Could not determine PROJECT_DIR from environment")
+        # print("Warning: Could not determine PROJECT_DIR from environment")
+        # print("Warning: Could not determine PROJECT_DIR from environment")
+        pass
     return project_dir
-
-
 # Get library scripts directory and add it to Python path
 library_scripts_dir = get_library_dir()
 sys.path.insert(0, str(library_scripts_dir))
 
-# Get library root directory (parent of arduinolib1_scripts)
+# Get library root directory (parent of serializationlib_scripts)
 library_dir = library_scripts_dir.parent
 
 # Get project directory
@@ -80,5 +82,5 @@ project_dir = get_project_dir()
 serializable_macro = os.environ.get("SERIALIZABLE_MACRO", "Serializable")
 
 # Import and execute scripts
-from arduinolib1_execute_scripts import execute_scripts
+from serializationlib_execute_scripts import execute_scripts
 execute_scripts(project_dir, library_dir, serializable_macro=serializable_macro)

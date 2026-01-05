@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-S5 Check NotBlank Macro Script
+S5 Check NotBlank Annotation Script
 
-This script checks if a class member has the NotBlank macro above it.
-NotBlank validation only applies to string types.
+This script checks if a class member has the @NotBlank annotation above it.
+@NotBlank validation only applies to string types.
 """
 
 import re
@@ -13,8 +13,8 @@ import argparse
 from pathlib import Path
 from typing import List, Dict, Optional
 
-print("Executing NayanSerializer/scripts/serializer/S5_check_notblank_macro.py")
-
+# print("Executing NayanSerializer/scripts/serializer/S5_check_notblank_macro.py")
+# print("Executing NayanSerializer/scripts/serializer/S5_check_notblank_macro.py")
 # Add parent directory to path for imports
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
@@ -22,8 +22,8 @@ sys.path.insert(0, script_dir)
 try:
     import S2_extract_dto_fields
 except ImportError as e:
-    print(f"Error: Could not import required modules: {e}")
-    print("Make sure S2_extract_dto_fields.py is in the same directory.")
+    # print(f"Error: Could not import required modules: {e}")
+    # print(f"Error: Could not import required modules: {e}")
     sys.exit(1)
 
 
@@ -57,24 +57,25 @@ def is_string_type(field_type: str) -> bool:
 
 def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, str]]:
     """
-    Extract all member variables that have the //@NotBlank annotation above them.
-    Only includes fields that are string types (NotBlank only applies to strings).
+    Extract all member variables that have the @NotBlank annotation above them.
+    Only includes fields that are string types (@NotBlank only applies to strings).
     
     Args:
         file_path: Path to the C++ file
         class_name: Name of the class
         
     Returns:
-        List of dictionaries with 'type', 'name', and 'access' keys for fields with NotBlank macro
+        List of dictionaries with 'type', 'name', and 'access' keys for fields with @NotBlank annotation
         (only string types are included)
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             lines = file.readlines()
     except Exception as e:
-        print(f"Error reading file: {e}")
-        return []
+        # print(f"Error reading file: {e}")
+        # print(f"Error reading file: {e}")
     
+        pass
     # Find class boundaries
     boundaries = S2_extract_dto_fields.find_class_boundaries(file_path, class_name)
     if not boundaries:
@@ -88,11 +89,10 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
-    # Pattern to match //@NotBlank annotation (case-sensitive)
-    # Also check for /*@NotBlank*/ (already processed, should be ignored)
-    notblank_annotation_pattern = r'^\s*//@NotBlank\s*$'
-    notblank_processed_pattern = r'^\s*/\*@NotBlank\*/\s*$'
-    notnull_annotation_pattern = r'^\s*//@NotNull\s*$'
+    # Pattern for /// @NotBlank or ///@NotBlank annotation (ignoring whitespace)
+    notblank_annotation_pattern = r'///\s*@NotBlank\b'
+    # Pattern for /// @NotNull or ///@NotNull annotation (can appear between @NotBlank and field)
+    notnull_annotation_pattern = r'///\s*@NotNull\b'
     # Field pattern: matches "int a;", "optional<StdString> x;" with optional access specifier
     field_pattern = r'^\s*(?:Public|Private|Protected)?\s*([A-Za-z_][A-Za-z0-9_<>*&,\s]*?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[;=]'
     
@@ -101,13 +101,12 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
         line = class_lines[i]
         stripped = line.strip()
         
-        # Skip already processed annotations (/*@AnnotationName*/)
-        if re.search(notblank_processed_pattern, stripped):
+        # Skip comments (but not the annotation itself which is in a comment)
+        if stripped.startswith('/*'):
             i += 1
             continue
-        
-        # Skip other comment types (but not //@ annotations)
-        if stripped.startswith('/*') and not stripped.startswith('//@'):
+        # Skip other single-line comments that aren't the annotation
+        if stripped.startswith('//') and not re.search(notblank_annotation_pattern, stripped):
             i += 1
             continue
         
@@ -123,27 +122,26 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
             i += 1
             continue
         
-        # Check for //@NotBlank annotation
+        # Check for @NotBlank annotation (/// @NotBlank or ///@NotBlank)
         notblank_match = re.search(notblank_annotation_pattern, stripped)
         if notblank_match:
-            # Look ahead for field declaration (within next 10 lines, may have NotNull in between)
+            # Look ahead for field declaration (within next 10 lines, may have @NotNull in between)
             found_field = False
             for j in range(i + 1, min(i + 11, len(class_lines))):
                 next_line = class_lines[j].strip()
                 
-                # Skip already processed annotations
-                if re.search(notblank_processed_pattern, next_line):
+                # Skip comments (but not the annotation itself)
+                if next_line.startswith('/*'):
                     continue
-                
-                # Skip other comment types (but not //@ annotations)
-                if next_line.startswith('/*') and not next_line.startswith('//@'):
+                # Skip other single-line comments that aren't annotations
+                if next_line.startswith('//') and not re.search(r'///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\b', next_line):
                     continue
                 
                 # Skip empty lines
                 if not next_line:
                     continue
                 
-                # Skip //@NotNull annotation (can appear between NotBlank and field)
+                # Skip @NotNull annotation (can appear between @NotBlank and field)
                 if re.search(notnull_annotation_pattern, next_line):
                     continue
                 
@@ -154,7 +152,7 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
                     field_name = field_match.group(2).strip()
                     # Skip if it looks like a method declaration
                     if '(' not in next_line and ')' not in next_line and field_name not in ['public', 'private', 'protected']:
-                        # Only include if it's a string type (NotBlank only applies to strings)
+                        # Only include if it's a string type (@NotBlank only applies to strings)
                         if is_string_type(field_type):
                             notblank_fields.append({
                                 'type': field_type,
@@ -166,8 +164,7 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
                 
                 # Stop if we hit another annotation or access specifier
                 if next_line and (re.search(access_pattern, next_line, re.IGNORECASE) or 
-                                 re.search(r'^\s*//@', next_line) or
-                                 re.search(r'^\s*/\*@', next_line)):
+                                 re.search(r'^\s*(Dto|Serializable|COMPONENT|SCOPE|VALIDATE|///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable))\s*$', next_line)):
                     break
             
             i += 1
@@ -181,7 +178,7 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
 def main():
     """Main function to handle command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Extract fields with //@NotBlank annotation from a class (string types only)"
+        description="Extract fields with @NotBlank annotation from a class (string types only)"
     )
     parser.add_argument(
         "file_path",
@@ -197,10 +194,10 @@ def main():
     
     fields = extract_notblank_fields(args.file_path, args.class_name)
     
-    print(f"NotBlank fields found: {len(fields)}")
-    for field in fields:
-        print(f"  {field['type']} {field['name']} (access: {field['access']})")
-    
+    # print(f"@NotBlank fields found: {len(fields)}")
+    # print(f"@NotBlank fields found: {len(fields)}")
+        # print(f"  {field['type']} {field['name']} (access: {field['access']})")
+        # print(f"  {field['type']} {field['name']} (access: {field['access']})")
     return 0
 
 
