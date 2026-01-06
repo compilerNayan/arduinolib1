@@ -9,6 +9,7 @@ Uses 05_list_client_files.py to get the list of client files.
 import os
 import sys
 import importlib.util
+from pathlib import Path
 
 # print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
 # print("Executing NayanSerializer/scripts/serializer/00_process_serializable_classes.py")
@@ -181,6 +182,43 @@ S3_inject_serialization = importlib.util.module_from_spec(spec_s3)
 spec_s3.loader.exec_module(S3_inject_serialization)
 
 
+def discover_all_libraries(project_dir):
+    """
+    Discover all library directories in build/_deps/ and other locations.
+    
+    Args:
+        project_dir: Path to the project root directory
+    
+    Returns:
+        List of Path objects pointing to library source directories
+    """
+    libraries = []
+    
+    if not project_dir:
+        return libraries
+    
+    project_path = Path(project_dir).resolve()
+    
+    # Check CMake FetchContent location: build/_deps/
+    build_deps = project_path / "build" / "_deps"
+    
+    if build_deps.exists() and build_deps.is_dir():
+        for lib_dir in build_deps.iterdir():
+            if lib_dir.is_dir() and not lib_dir.name.startswith("."):
+                lib_name = lib_dir.name
+                
+                # Include -src directories (source libraries)
+                if lib_name.endswith("-src"):
+                    lib_root = lib_dir.resolve()
+                    libraries.append(lib_root)
+                # Also check if it's a library with src/ directory (like arduino-core-src)
+                elif (lib_dir / "src").exists() and (lib_dir / "src").is_dir():
+                    lib_root = lib_dir.resolve()
+                    libraries.append(lib_root)
+    
+    return libraries
+
+
 def process_all_serializable_classes(dry_run=False, serializable_macro=None):
     """
     Process all client files that contain classes with @Serializable annotation.
@@ -201,8 +239,6 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         else:
             serializable_macro = "Serializable"
     
-    # print(f"Using serializable macro: {serializable_macro}")
-    # print(f"Using serializable macro: {serializable_macro}")
     # Get project_dir from globals or environment
     project_dir = None
     if 'project_dir' in globals():
@@ -213,30 +249,36 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         project_dir = os.environ['CMAKE_PROJECT_DIR']
     
     if not project_dir:
-        # print("Error: project_dir not available. Cannot determine client project directory.")
-        # print("Error: project_dir not available. Cannot determine client project directory.")
+        return 0
     
-        pass
     # Get client header files using get_client_files function
     if get_client_files is None:
-        # print("Error: get_client_files function not available.")
-        # print("Error: get_client_files function not available.")
+        return 0
     
-        pass
+    # Discover all libraries in build/_deps/
+    all_libraries = discover_all_libraries(project_dir)
+    
+    # Collect header files from project_dir and all discovered libraries
+    header_files = []
+    
+    # Get files from project_dir
     try:
-        header_files = get_client_files(project_dir, file_extensions=['.h', '.hpp'])
+        project_files = get_client_files(project_dir, file_extensions=['.h', '.hpp'])
+        header_files.extend(project_files)
     except Exception as e:
-        # print(f"Error: Failed to get client files: {e}")
-        # print(f"Error: Failed to get client files: {e}")
-    
         pass
+    
+    # Get files from all discovered libraries
+    for lib_dir in all_libraries:
+        try:
+            lib_files = get_client_files(str(lib_dir), skip_exclusions=True, file_extensions=['.h', '.hpp'])
+            header_files.extend(lib_files)
+        except Exception as e:
+            pass
+    
     if not header_files:
-        # print("ℹ️  No client header files found")
-        # print("ℹ️  No client header files found")
+        return 0
     
-        pass
-    # print(f"🔍 Scanning {len(header_files)} header file(s) for Serializable classes...")
-    # print(f"🔍 Scanning {len(header_files)} header file(s) for Serializable classes...")
     processed_count = 0
     
     # Process each header file
@@ -251,8 +293,6 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
             continue
         
         class_name = dto_info['class_name']
-        # print(f"\n📝 Processing {os.path.basename(file_path)}: {class_name}")
-        # print(f"\n📝 Processing {os.path.basename(file_path)}: {class_name}")
         # Extract fields
         import S2_extract_dto_fields
         spec_s2 = importlib.util.spec_from_file_location("S2_extract_dto_fields", os.path.join(script_dir, "S2_extract_dto_fields.py"))
