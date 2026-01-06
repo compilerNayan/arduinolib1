@@ -184,7 +184,7 @@ spec_s3.loader.exec_module(S3_inject_serialization)
 
 def discover_all_libraries(project_dir):
     """
-    Discover all library directories in build/_deps/ and other locations.
+    Discover all library directories in build/_deps/ (CMake) and .pio/libdeps/ (PlatformIO).
     
     Args:
         project_dir: Path to the project root directory
@@ -193,6 +193,7 @@ def discover_all_libraries(project_dir):
         List of Path objects pointing to library source directories
     """
     libraries = []
+    seen_libraries = set()  # Track seen libraries to avoid duplicates
     
     if not project_dir:
         return libraries
@@ -210,11 +211,36 @@ def discover_all_libraries(project_dir):
                 # Include -src directories (source libraries)
                 if lib_name.endswith("-src"):
                     lib_root = lib_dir.resolve()
-                    libraries.append(lib_root)
+                    lib_path_str = str(lib_root)
+                    if lib_path_str not in seen_libraries:
+                        seen_libraries.add(lib_path_str)
+                        libraries.append(lib_root)
                 # Also check if it's a library with src/ directory (like arduino-core-src)
                 elif (lib_dir / "src").exists() and (lib_dir / "src").is_dir():
                     lib_root = lib_dir.resolve()
-                    libraries.append(lib_root)
+                    lib_path_str = str(lib_root)
+                    if lib_path_str not in seen_libraries:
+                        seen_libraries.add(lib_path_str)
+                        libraries.append(lib_root)
+    
+    # Check PlatformIO library location: .pio/libdeps/
+    pio_libdeps = project_path / ".pio" / "libdeps"
+    
+    if pio_libdeps.exists() and pio_libdeps.is_dir():
+        # Iterate through environment directories (e.g., esp32dev, native, etc.)
+        for env_dir in pio_libdeps.iterdir():
+            if env_dir.is_dir():
+                # Iterate through libraries in this environment
+                for lib_dir in env_dir.iterdir():
+                    if lib_dir.is_dir():
+                        lib_root = lib_dir.resolve()
+                        lib_path_str = str(lib_root)
+                        
+                        # Check if this library has a src/ directory
+                        if (lib_root / "src").exists() and (lib_root / "src").is_dir():
+                            if lib_path_str not in seen_libraries:
+                                seen_libraries.add(lib_path_str)
+                                libraries.append(lib_root)
     
     return libraries
 
