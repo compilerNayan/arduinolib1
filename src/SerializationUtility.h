@@ -8,6 +8,10 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cctype>
+#include <vector>
+#include <set>
+#include <map>
+#include <optional>
 
 namespace nayan {
 namespace serializer {
@@ -32,8 +36,16 @@ public:
      */
     template<typename T>
     static StdString Serialize(const T& value) {
+        // Handle optional types first
+        if constexpr (is_optional_v<T>) {
+            return serialize_optional(value);
+        }
+        // Handle container types (vector, set, map, etc.)
+        else if constexpr (is_container_v<T>) {
+            return serialize_container(value);
+        }
         // Handle string types as special case - return as StdString (no conversion needed)
-        if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, StdString>) {
+        else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, StdString>) {
             // std::string or StdString (which is std::string), return as-is
             return value;
         } else if constexpr (std::is_same_v<T, const std::string> || std::is_same_v<T, CStdString>) {
@@ -98,6 +110,237 @@ private:
     // Helper variable template
     template<typename T>
     static constexpr bool is_primitive_type_v = is_primitive_type<T>::value;
+    
+    /**
+     * Type trait to check if a type is std::optional.
+     */
+    template<typename T>
+    struct is_optional {
+        static constexpr bool value = false;
+    };
+    
+    template<typename T>
+    struct is_optional<std::optional<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_optional<optional<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    static constexpr bool is_optional_v = is_optional<T>::value;
+    
+    /**
+     * Type trait to check if a type is a container (vector, set, map, etc.).
+     */
+    template<typename T>
+    struct is_container {
+        static constexpr bool value = false;
+    };
+    
+    template<typename T, typename Alloc>
+    struct is_container<std::vector<T, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Alloc>
+    struct is_container<vector<T, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Compare, typename Alloc>
+    struct is_container<std::set<T, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Compare, typename Alloc>
+    struct is_container<std::multiset<T, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value, typename Compare, typename Alloc>
+    struct is_container<std::map<Key, Value, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value, typename Compare, typename Alloc>
+    struct is_container<std::multimap<Key, Value, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    static constexpr bool is_container_v = is_container<T>::value;
+    
+    /**
+     * Type trait to check if a container is a map type.
+     */
+    template<typename T>
+    struct is_map_container {
+        static constexpr bool value = false;
+    };
+    
+    template<typename Key, typename Value, typename Compare, typename Alloc>
+    struct is_map_container<std::map<Key, Value, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value, typename Compare, typename Alloc>
+    struct is_map_container<std::multimap<Key, Value, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    static constexpr bool is_map_container_v = is_map_container<T>::value;
+    
+    /**
+     * Serialize an optional value.
+     * Returns empty string if not present, otherwise serializes the inner value.
+     */
+    template<typename T>
+    static StdString serialize_optional(const T& opt_value) {
+        if constexpr (is_optional_v<T>) {
+            if (!opt_value.has_value()) {
+                return StdString("");
+            }
+            // Get the inner type and serialize it
+            using InnerType = typename T::value_type;
+            return Serialize(opt_value.value());
+        }
+        return StdString("");
+    }
+    
+    /**
+     * Serialize a container (vector, set, map, etc.) to JSON array format.
+     * Iterates through all elements and serializes each, returns JSON array.
+     */
+    template<typename Container>
+    static StdString serialize_container(const Container& container) {
+        StdString result = "[";
+        bool first = true;
+        
+        for (const auto& element : container) {
+            if (!first) {
+                result += ",";
+            }
+            first = false;
+            
+            // Check if container is a map type
+            if constexpr (is_map_container_v<Container>) {
+                // For maps, serialize as {"key":...,"value":...}
+                StdString key_serialized = Serialize(element.first);
+                StdString value_serialized = Serialize(element.second);
+                
+                result += "{";
+                result += "\"key\":";
+                // Add key (may need quoting)
+                if (key_serialized.empty() || key_serialized[0] == '{' || key_serialized[0] == '[') {
+                    result += key_serialized;
+                } else if (key_serialized.length() >= 2 && 
+                          key_serialized[0] == '"' && key_serialized[key_serialized.length() - 1] == '"') {
+                    result += key_serialized;
+                } else {
+                    StdString escaped = escape_json_string(key_serialized);
+                    result += "\"";
+                    result += escaped;
+                    result += "\"";
+                }
+                result += ",\"value\":";
+                // Add value (may be JSON object/array or primitive)
+                if (value_serialized.empty() || 
+                    (value_serialized[0] == '{' || value_serialized[0] == '[')) {
+                    result += value_serialized;
+                } else if (value_serialized.length() >= 2 && 
+                          value_serialized[0] == '"' && value_serialized[value_serialized.length() - 1] == '"') {
+                    result += value_serialized;
+                } else {
+                    StdString escaped = escape_json_string(value_serialized);
+                    result += "\"";
+                    result += escaped;
+                    result += "\"";
+                }
+                result += "}";
+            } else {
+                // For non-map containers (vector, set, etc.), serialize element directly
+                StdString serialized = Serialize(element);
+                
+                // If the serialized value is a JSON object/array (starts with { or [), add as-is
+                // Otherwise, if it's a string, we need to escape it and wrap in quotes
+                // For primitives, we can add as-is
+                if (serialized.empty() || 
+                    (serialized[0] == '{' || serialized[0] == '[')) {
+                    // Already JSON object/array, add as-is
+                    result += serialized;
+                } else {
+                    // String or primitive - check if it needs quotes
+                    // If it's already a quoted string, use as-is, otherwise quote it
+                    if (serialized.length() >= 2 && 
+                        serialized[0] == '"' && serialized[serialized.length() - 1] == '"') {
+                        // Already quoted, use as-is
+                        result += serialized;
+                    } else {
+                        // Need to escape and quote
+                        StdString escaped = escape_json_string(serialized);
+                        result += "\"";
+                        result += escaped;
+                        result += "\"";
+                    }
+                }
+            }
+        }
+        
+        result += "]";
+        return result;
+    }
+    
+    /**
+     * Type trait to check if a type is a std::pair.
+     */
+    template<typename T>
+    struct is_pair {
+        static constexpr bool value = false;
+    };
+    
+    template<typename First, typename Second>
+    struct is_pair<std::pair<First, Second>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    static constexpr bool is_pair_v = is_pair<T>::value;
+    
+    /**
+     * Escape special characters in a JSON string.
+     */
+    static StdString escape_json_string(const StdString& str) {
+        StdString escaped;
+        escaped.reserve(str.length() + 10); // Reserve some extra space
+        
+        for (char c : str) {
+            switch (c) {
+                case '"':  escaped += "\\\""; break;
+                case '\\': escaped += "\\\\"; break;
+                case '\b': escaped += "\\b"; break;
+                case '\f': escaped += "\\f"; break;
+                case '\n': escaped += "\\n"; break;
+                case '\r': escaped += "\\r"; break;
+                case '\t': escaped += "\\t"; break;
+                default:
+                    // Control characters (0x00-0x1F) should be escaped as \uXXXX
+                    if (c >= 0 && c < 32) {
+                        char hex[7];
+                        snprintf(hex, sizeof(hex), "\\u%04x", static_cast<unsigned char>(c));
+                        escaped += hex;
+                    } else {
+                        escaped += c;
+                    }
+                    break;
+            }
+        }
+        
+        return escaped;
+    }
     
     /**
      * Convert a primitive type to StdString.
