@@ -113,20 +113,23 @@ private:
     
     /**
      * Type trait to check if a type is std::optional.
+     * Uses SFINAE to detect optional types by checking for has_value() and value() methods.
      */
     template<typename T>
     struct is_optional {
-        static constexpr bool value = false;
-    };
-    
-    template<typename T>
-    struct is_optional<std::optional<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_optional<optional<T>> {
-        static constexpr bool value = true;
+    private:
+        template<typename U>
+        static auto test(int) -> decltype(
+            std::declval<const U&>().has_value(),
+            std::declval<const U&>().value(),
+            std::true_type{}
+        );
+        
+        template<typename>
+        static std::false_type test(...);
+        
+    public:
+        static constexpr bool value = decltype(test<T>(0))::value;
     };
     
     template<typename T>
