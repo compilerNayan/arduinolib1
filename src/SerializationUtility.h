@@ -2,12 +2,24 @@
 #define SERIALIZATION_UTILITY_H
 
 #include <StandardDefines.h>
+#include <ArduinoJson.h>
 #include <string>
 #include <sstream>
 #include <type_traits>
 #include <stdexcept>
 #include <algorithm>
 #include <cctype>
+#include <vector>
+#include <list>
+#include <deque>
+#include <set>
+#include <unordered_set>
+#include <map>
+#include <unordered_map>
+#include <array>
+#include <forward_list>
+#include <multimap>
+#include <unordered_multimap>
 
 namespace nayan {
 namespace serializer {
@@ -35,6 +47,12 @@ public:
         if constexpr (is_primitive_type_v<T>) {
             // Convert primitive type to string
             return convert_primitive_to_string(value);
+        } else if constexpr (is_sequential_container_v<T>) {
+            // Handle sequential containers (vector, list, deque, set, unordered_set, etc.)
+            return serialize_sequential_container(value);
+        } else if constexpr (is_associative_container_v<T>) {
+            // Handle associative containers (map, unordered_map)
+            return serialize_associative_container(value);
         } else {
             // Call the type's Serialize method
             return value.Serialize();
@@ -89,6 +107,120 @@ private:
     // Helper variable template
     template<typename T>
     static constexpr bool is_primitive_type_v = is_primitive_type<T>::value;
+    
+    /**
+     * Type trait to check if a type is a sequential container.
+     * Includes: vector, list, deque, set, unordered_set, array, forward_list
+     */
+    template<typename T>
+    struct is_sequential_container {
+        static constexpr bool value = false;
+    };
+    
+    template<typename T, typename Alloc>
+    struct is_sequential_container<std::vector<T, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Alloc>
+    struct is_sequential_container<std::list<T, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Alloc>
+    struct is_sequential_container<std::deque<T, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Compare, typename Alloc>
+    struct is_sequential_container<std::set<T, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Hash, typename Equal, typename Alloc>
+    struct is_sequential_container<std::unordered_set<T, Hash, Equal, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, std::size_t N>
+    struct is_sequential_container<std::array<T, N>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, typename Alloc>
+    struct is_sequential_container<std::forward_list<T, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    // Handle StandardDefines typedefs (vector, list, etc.)
+    template<typename T>
+    struct is_sequential_container<vector<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<list<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<deque<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<set<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<unordered_set<T>> {
+        static constexpr bool value = true;
+    };
+    
+    
+    // Helper variable template
+    template<typename T>
+    static constexpr bool is_sequential_container_v = is_sequential_container<T>::value;
+    
+    /**
+     * Type trait to check if a type is an associative container (map).
+     * Includes: map, unordered_map, multimap, unordered_multimap
+     */
+    template<typename T>
+    struct is_associative_container {
+        static constexpr bool value = false;
+    };
+    
+    template<typename Key, typename Value, typename Compare, typename Alloc>
+    struct is_associative_container<std::map<Key, Value, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value, typename Hash, typename Equal, typename Alloc>
+    struct is_associative_container<std::unordered_map<Key, Value, Hash, Equal, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value, typename Compare, typename Alloc>
+    struct is_associative_container<std::multimap<Key, Value, Compare, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value, typename Hash, typename Equal, typename Alloc>
+    struct is_associative_container<std::unordered_multimap<Key, Value, Hash, Equal, Alloc>> {
+        static constexpr bool value = true;
+    };
+    
+    // Handle StandardDefines typedefs (std_map)
+    template<typename Key, typename Value>
+    struct is_associative_container<std_map<Key, Value>> {
+        static constexpr bool value = true;
+    };
+    
+    // Helper variable template
+    template<typename T>
+    static constexpr bool is_associative_container_v = is_associative_container<T>::value;
     
     /**
      * Convert a primitive type to StdString.
@@ -175,6 +307,127 @@ private:
             }
             return value;
         }
+    }
+    
+    /**
+     * Serialize a sequential container (vector, list, deque, set, etc.) to JSON array.
+     */
+    template<typename Container>
+    static StdString serialize_sequential_container(const Container& container) {
+        JsonDocument doc;
+        JsonArray array = doc.to<JsonArray>();
+        
+        for (const auto& element : container) {
+            if constexpr (is_primitive_type_v<typename Container::value_type>) {
+                // For primitives, add directly to array
+                if constexpr (std::is_same_v<typename Container::value_type, bool> || 
+                              std::is_same_v<typename Container::value_type, Bool> ||
+                              std::is_same_v<typename Container::value_type, CBool>) {
+                    array.add(element);
+                } else if constexpr (std::is_same_v<typename Container::value_type, StdString> ||
+                                     std::is_same_v<typename Container::value_type, CStdString> ||
+                                     std::is_same_v<typename Container::value_type, std::string>) {
+                    array.add(element.c_str());
+                } else if constexpr (std::is_integral_v<typename Container::value_type>) {
+                    array.add(static_cast<int64_t>(element));
+                } else if constexpr (std::is_floating_point_v<typename Container::value_type>) {
+                    array.add(static_cast<double>(element));
+                } else {
+                    // Fallback: serialize and parse
+                    StdString elementJson = Serialize(element);
+                    JsonDocument elemDoc;
+                    if (deserializeJson(elemDoc, elementJson.c_str()) == DeserializationError::Ok) {
+                        array.add(elemDoc.as<JsonVariant>());
+                    } else {
+                        array.add(elementJson.c_str());
+                    }
+                }
+            } else {
+                // For complex types, serialize to JSON string, then parse and add
+                StdString elementJson = Serialize(element);
+                JsonDocument elementDoc;
+                DeserializationError error = deserializeJson(elementDoc, elementJson.c_str());
+                if (error == DeserializationError::Ok) {
+                    array.add(elementDoc.as<JsonVariant>());
+                } else {
+                    // If parsing fails, add as string (shouldn't happen for valid JSON)
+                    array.add(elementJson.c_str());
+                }
+            }
+        }
+        
+        StdString output;
+        serializeJson(doc, output);
+        return StdString(output.c_str());
+    }
+    
+    /**
+     * Serialize an associative container (map, unordered_map) to JSON object.
+     */
+    template<typename Map>
+    static StdString serialize_associative_container(const Map& map) {
+        JsonDocument doc;
+        JsonObject obj = doc.to<JsonObject>();
+        
+        for (const auto& pair : map) {
+            // Serialize key
+            StdString keyJson = Serialize(pair.first);
+            StdString keyStr;
+            
+            if (is_primitive_type_v<typename Map::key_type>) {
+                if constexpr (std::is_same_v<typename Map::key_type, StdString> ||
+                              std::is_same_v<typename Map::key_type, CStdString> ||
+                              std::is_same_v<typename Map::key_type, std::string>) {
+                    keyStr = pair.first;
+                } else {
+                    keyStr = keyJson;
+                }
+            } else {
+                // For complex key types, use the serialized JSON as key (may need adjustment)
+                keyStr = keyJson;
+            }
+            
+            // Serialize value
+            StdString valueJson = Serialize(pair.second);
+            
+            // Parse value JSON and add to object
+            JsonDocument valueDoc;
+            DeserializationError error = deserializeJson(valueDoc, valueJson.c_str());
+            if (error == DeserializationError::Ok) {
+                obj[keyStr.c_str()] = valueDoc.as<JsonVariant>();
+            } else {
+                // If value is primitive, add directly
+                if (is_primitive_type_v<typename Map::mapped_type>) {
+                    if constexpr (std::is_same_v<typename Map::mapped_type, bool> ||
+                                  std::is_same_v<typename Map::mapped_type, Bool> ||
+                                  std::is_same_v<typename Map::mapped_type, CBool>) {
+                        obj[keyStr.c_str()] = pair.second;
+                    } else if constexpr (std::is_same_v<typename Map::mapped_type, StdString> ||
+                                         std::is_same_v<typename Map::mapped_type, CStdString> ||
+                                         std::is_same_v<typename Map::mapped_type, std::string>) {
+                        obj[keyStr.c_str()] = pair.second.c_str();
+                    } else if constexpr (std::is_integral_v<typename Map::mapped_type>) {
+                        obj[keyStr.c_str()] = static_cast<int64_t>(pair.second);
+                    } else if constexpr (std::is_floating_point_v<typename Map::mapped_type>) {
+                        obj[keyStr.c_str()] = static_cast<double>(pair.second);
+                    } else {
+                        obj[keyStr.c_str()] = valueJson.c_str();
+                    }
+                } else {
+                    // For complex types, parse and add
+                    JsonDocument valDoc;
+                    if (deserializeJson(valDoc, valueJson.c_str()) == DeserializationError::Ok) {
+                        obj[keyStr.c_str()] = valDoc.as<JsonVariant>();
+                    } else {
+                        obj[keyStr.c_str()] = valueJson.c_str();
+                    }
+                }
+            }
+        }
+        
+        StdString output;
+        serializeJson(doc, output);
+        return StdString(output.c_str());
     }
 };
 
