@@ -32,14 +32,7 @@ public:
      */
     template<typename T>
     static StdString Serialize(const T& value) {
-        // Handle string types as special case - return as StdString (no conversion needed)
-        if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, StdString>) {
-            // std::string or StdString (which is std::string), return as-is
-            return value;
-        } else if constexpr (std::is_same_v<T, const std::string> || std::is_same_v<T, CStdString>) {
-            // const std::string or CStdString (const), convert to StdString
-            return StdString(value);
-        } else if constexpr (is_primitive_type_v<T>) {
+        if constexpr (is_primitive_type_v<T>) {
             // Convert primitive type to string
             return convert_primitive_to_string(value);
         } else {
