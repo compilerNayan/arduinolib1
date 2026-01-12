@@ -151,6 +151,8 @@ private:
     };
     
     // Handle StandardDefines typedefs (vector, list, etc.)
+    // These are 'using' declarations that refer to std:: types, so they should match the std:: specializations above
+    // But we add explicit specializations to ensure they work with SFINAE
     template<typename T>
     struct is_sequential_container<vector<T>> {
         static constexpr bool value = true;
@@ -177,6 +179,8 @@ private:
     };
     
     // Handle StandardDefines template aliases (Vector, List, Deque, Set, UnorderedSet, Array)
+    // Template aliases resolve to their base types, but we need explicit specializations for SFINAE
+    // Use a helper to avoid redefinition errors
     template<typename T>
     struct is_sequential_container<Vector<T>> {
         static constexpr bool value = true;
