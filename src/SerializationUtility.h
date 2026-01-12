@@ -150,66 +150,9 @@ private:
         static constexpr bool value = true;
     };
     
-    // Handle StandardDefines typedefs (vector, list, etc.)
-    // These are 'using' declarations that refer to std:: types, so they should match the std:: specializations above
-    // But we add explicit specializations to ensure they work with SFINAE
-    template<typename T>
-    struct is_sequential_container<vector<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<list<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<deque<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<set<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<unordered_set<T>> {
-        static constexpr bool value = true;
-    };
-    
-    // Handle StandardDefines template aliases (Vector, List, Deque, Set, UnorderedSet, Array)
-    // Template aliases resolve to their base types, but we need explicit specializations for SFINAE
-    // Use a helper to avoid redefinition errors
-    template<typename T>
-    struct is_sequential_container<Vector<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<List<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<Deque<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<Set<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T>
-    struct is_sequential_container<UnorderedSet<T>> {
-        static constexpr bool value = true;
-    };
-    
-    template<typename T, std::size_t N>
-    struct is_sequential_container<Array<T, N>> {
-        static constexpr bool value = true;
-    };
+    // Note: StandardDefines typedefs (vector, list, etc.) and template aliases (Vector, List, etc.)
+    // all resolve to std:: types, so they are handled by the std:: specializations above.
+    // No additional specializations are needed since template aliases don't create new types.
     
     
     // Helper variable template
