@@ -69,6 +69,13 @@ public:
         if constexpr (is_primitive_type_v<ReturnType>) {
             // Convert string to primitive type
             return convert_string_to_primitive<ReturnType>(input);
+        } else if constexpr (is_sequential_container_v<ReturnType>) {
+            // Handle sequential containers (vector, list, deque, set, unordered_set, etc.)
+            return deserialize_sequential_container<ReturnType>(input);
+        } else if constexpr (is_associative_container_v<ReturnType>) {
+            // Handle associative containers (map, unordered_map)
+            // TODO: Implement deserialize_associative_container
+            throw std::runtime_error("Deserialization of associative containers not yet implemented");
         } else {
             // Call the type's Deserialize method
             return ReturnType::Deserialize(input);
@@ -348,6 +355,77 @@ private:
         StdString output;
         serializeJson(doc, output);
         return StdString(output.c_str());
+    }
+    
+    /**
+     * Deserialize a JSON array string to a sequential container (vector, list, deque, etc.).
+     * 
+     * Currently supports containers that use push_back (Vector, List, Deque).
+     * For Set and UnorderedSet (which use insert), this will need to be extended.
+     * 
+     * @tparam Container The container type to deserialize to (e.g., Vector<ProductX>)
+     * @param input The JSON array string
+     * @return The deserialized container
+     */
+    template<typename Container>
+    static Container deserialize_sequential_container(const StdString& input) {
+        // Parse the JSON string into a JsonDocument
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, input.c_str());
+        
+        if (error != DeserializationError::Ok) {
+            throw std::invalid_argument("Failed to parse JSON: " + input);
+        }
+        
+        // Check if it's an array
+        if (!doc.is<JsonArray>()) {
+            throw std::invalid_argument("Expected JSON array, got: " + input);
+        }
+        
+        JsonArray jsonArray = doc.as<JsonArray>();
+        Container container;
+        
+        // Get the value type of the container
+        using ValueType = typename Container::value_type;
+        
+        // Iterate through each element in the JSON array
+        for (JsonVariant element : jsonArray) {
+            if constexpr (is_primitive_type_v<ValueType>) {
+                // For primitive types, extract directly from JSON
+                if constexpr (std::is_same_v<ValueType, bool> || 
+                             std::is_same_v<ValueType, Bool> || 
+                             std::is_same_v<ValueType, CBool>) {
+                    container.push_back(element.as<bool>());
+                } else if constexpr (std::is_same_v<ValueType, StdString> ||
+                                     std::is_same_v<ValueType, CStdString> ||
+                                     std::is_same_v<ValueType, std::string>) {
+                    const char* str = element.as<const char*>();
+                    container.push_back(ValueType(str ? str : ""));
+                } else if constexpr (std::is_integral_v<ValueType>) {
+                    if constexpr (std::is_signed_v<ValueType>) {
+                        container.push_back(static_cast<ValueType>(element.as<int64_t>()));
+                    } else {
+                        container.push_back(static_cast<ValueType>(element.as<uint64_t>()));
+                    }
+                } else if constexpr (std::is_floating_point_v<ValueType>) {
+                    container.push_back(static_cast<ValueType>(element.as<double>()));
+                } else {
+                    // Fallback for other primitive types
+                    StdString elementStr;
+                    serializeJson(element, elementStr);
+                    container.push_back(convert_string_to_primitive<ValueType>(elementStr));
+                }
+            } else {
+                // For complex types (like ProductX), serialize the element to JSON string
+                // and call the type's Deserialize method
+                StdString elementJson;
+                serializeJson(element, elementJson);
+                ValueType deserializedElement = ValueType::Deserialize(elementJson);
+                container.push_back(deserializedElement);
+            }
+        }
+        
+        return container;
     }
     
     /**
