@@ -42,7 +42,16 @@ public:
      */
     template<typename T>
     static StdString Serialize(const T& value) {
-        if constexpr (is_primitive_type_v<T>) {
+        if constexpr (is_optional_type_v<T>) {
+            // Handle optional types (optional<T> or std::optional<T>)
+            if (value.has_value()) {
+                // If optional has a value, serialize it
+                return Serialize(value.value());
+            } else {
+                // If optional is empty, return empty JSON string
+                return "";
+            }
+        } else if constexpr (is_primitive_type_v<T>) {
             // Convert primitive type to string
             return convert_primitive_to_string(value);
         } else if constexpr (is_sequential_container_v<T>) {
@@ -66,7 +75,26 @@ public:
      */
     template<typename ReturnType>
     static ReturnType Deserialize(const StdString& input) {
-        if constexpr (is_primitive_type_v<ReturnType>) {
+        if constexpr (is_optional_type_v<ReturnType>) {
+            // Handle optional types (optional<T> or std::optional<T>)
+            using ValueType = typename ReturnType::value_type;
+            
+            // Check if input is null or empty
+            if (input.empty() || input == "null" || input == "{}") {
+                return ReturnType(); // Return empty optional
+            }
+            
+            // Try to parse as JSON to check if it's null
+            JsonDocument doc;
+            DeserializationError error = deserializeJson(doc, input.c_str());
+            if (error == DeserializationError::Ok && doc.isNull()) {
+                return ReturnType(); // Return empty optional
+            }
+            
+            // If input has a value, deserialize it
+            ValueType value = Deserialize<ValueType>(input);
+            return ReturnType(value);
+        } else if constexpr (is_primitive_type_v<ReturnType>) {
             // Convert string to primitive type
             return convert_string_to_primitive<ReturnType>(input);
         } else if constexpr (is_sequential_container_v<ReturnType>) {
@@ -208,6 +236,23 @@ private:
     // Helper variable template
     template<typename T>
     static constexpr bool is_associative_container_v = is_associative_container<T>::value;
+    
+    /**
+     * Type trait to check if a type is an optional type (std::optional<T> or optional<T>).
+     */
+    template<typename T>
+    struct is_optional_type {
+        static constexpr bool value = false;
+    };
+    
+    template<typename T>
+    struct is_optional_type<std::optional<T>> {
+        static constexpr bool value = true;
+    };
+    
+    // Helper variable template
+    template<typename T>
+    static constexpr bool is_optional_type_v = is_optional_type<T>::value;
     
     /**
      * Convert a primitive type to StdString.
