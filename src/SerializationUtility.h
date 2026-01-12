@@ -73,9 +73,8 @@ public:
             // Handle sequential containers (vector, list, deque, set, unordered_set, etc.)
             return deserialize_sequential_container<ReturnType>(input);
         } else if constexpr (is_associative_container_v<ReturnType>) {
-            // Handle associative containers (map, unordered_map)
-            // TODO: Implement deserialize_associative_container
-            throw std::runtime_error("Deserialization of associative containers not yet implemented");
+            // Handle associative containers (Map, UnorderedMap)
+            return deserialize_associative_container<ReturnType>(input);
         } else {
             // Call the type's Deserialize method
             return ReturnType::Deserialize(input);
@@ -358,12 +357,93 @@ private:
     }
     
     /**
-     * Deserialize a JSON array string to a sequential container (vector, list, deque, etc.).
+     * Helper type trait to detect std::array (used for Array alias detection)
+     */
+    template<typename T>
+    struct is_std_array_type : std::false_type {};
+    
+    template<typename T, std::size_t N>
+    struct is_std_array_type<std::array<T, N>> : std::true_type {};
+    
+    /**
+     * Helper function to deserialize a single element from JSON and add it to a container.
+     * Handles different container insertion methods (push_back, insert, array indexing).
+     */
+    template<typename Container, typename ValueType>
+    static void deserialize_and_add_element(Container& container, const JsonVariant& element, size_t index) {
+        ValueType deserializedValue;
+        
+        if constexpr (is_primitive_type_v<ValueType>) {
+            // For primitive types, extract directly from JSON
+            if constexpr (std::is_same_v<ValueType, bool> || 
+                         std::is_same_v<ValueType, Bool> || 
+                         std::is_same_v<ValueType, CBool>) {
+                deserializedValue = element.as<bool>();
+            } else if constexpr (std::is_same_v<ValueType, StdString> ||
+                                 std::is_same_v<ValueType, CStdString> ||
+                                 std::is_same_v<ValueType, std::string>) {
+                const char* str = element.as<const char*>();
+                deserializedValue = ValueType(str ? str : "");
+            } else if constexpr (std::is_integral_v<ValueType>) {
+                if constexpr (std::is_signed_v<ValueType>) {
+                    deserializedValue = static_cast<ValueType>(element.as<int64_t>());
+                } else {
+                    deserializedValue = static_cast<ValueType>(element.as<uint64_t>());
+                }
+            } else if constexpr (std::is_floating_point_v<ValueType>) {
+                deserializedValue = static_cast<ValueType>(element.as<double>());
+            } else {
+                // Fallback for other primitive types
+                StdString elementStr;
+                serializeJson(element, elementStr);
+                deserializedValue = convert_string_to_primitive<ValueType>(elementStr);
+            }
+        } else {
+            // For complex types (like ProductX), serialize the element to JSON string
+            // and call the type's Deserialize method
+            StdString elementJson;
+            serializeJson(element, elementJson);
+            deserializedValue = ValueType::Deserialize(elementJson);
+        }
+        
+        // Add to container based on container type
+        // Helper to detect if container is Set/UnorderedSet
+        constexpr bool isSetType = std::is_same_v<Container, std::set<ValueType>> ||
+                                  std::is_same_v<Container, Set<ValueType>> ||
+                                  std::is_same_v<Container, std::unordered_set<ValueType>> ||
+                                  std::is_same_v<Container, UnorderedSet<ValueType>>;
+        
+        // Helper to detect if container is Array (std::array or Array alias)
+        // Since Array<T, N> is an alias for std::array<T, N>, we check for std::array
+        constexpr bool isArrayType = std::is_array_v<Container> || 
+                                     is_std_array_type<Container>::value;
+        
+        if constexpr (isSetType) {
+            // Set and UnorderedSet use insert
+            container.insert(deserializedValue);
+        } else if constexpr (isArrayType) {
+            // Array uses indexing (fixed size)
+            if constexpr (std::is_array_v<Container>) {
+                if (index < std::extent_v<Container>) {
+                    container[index] = deserializedValue;
+                }
+            } else {
+                // std::array or Array
+                if (index < container.size()) {
+                    container[index] = deserializedValue;
+                }
+            }
+        } else {
+            // Vector, List, Deque use push_back
+            container.push_back(deserializedValue);
+        }
+    }
+    
+    /**
+     * Deserialize a JSON array string to a sequential container.
+     * Supports: Vector, List, Deque, Set, UnorderedSet, Array
      * 
-     * Currently supports containers that use push_back (Vector, List, Deque).
-     * For Set and UnorderedSet (which use insert), this will need to be extended.
-     * 
-     * @tparam Container The container type to deserialize to (e.g., Vector<ProductX>)
+     * @tparam Container The container type to deserialize to (e.g., Vector<ProductX>, Set<int>, Array<Person, 3>)
      * @param input The JSON array string
      * @return The deserialized container
      */
@@ -388,44 +468,131 @@ private:
         // Get the value type of the container
         using ValueType = typename Container::value_type;
         
-        // Iterate through each element in the JSON array
-        for (JsonVariant element : jsonArray) {
-            if constexpr (is_primitive_type_v<ValueType>) {
-                // For primitive types, extract directly from JSON
-                if constexpr (std::is_same_v<ValueType, bool> || 
-                             std::is_same_v<ValueType, Bool> || 
-                             std::is_same_v<ValueType, CBool>) {
-                    container.push_back(element.as<bool>());
-                } else if constexpr (std::is_same_v<ValueType, StdString> ||
-                                     std::is_same_v<ValueType, CStdString> ||
-                                     std::is_same_v<ValueType, std::string>) {
-                    const char* str = element.as<const char*>();
-                    container.push_back(ValueType(str ? str : ""));
-                } else if constexpr (std::is_integral_v<ValueType>) {
-                    if constexpr (std::is_signed_v<ValueType>) {
-                        container.push_back(static_cast<ValueType>(element.as<int64_t>()));
-                    } else {
-                        container.push_back(static_cast<ValueType>(element.as<uint64_t>()));
-                    }
-                } else if constexpr (std::is_floating_point_v<ValueType>) {
-                    container.push_back(static_cast<ValueType>(element.as<double>()));
-                } else {
-                    // Fallback for other primitive types
-                    StdString elementStr;
-                    serializeJson(element, elementStr);
-                    container.push_back(convert_string_to_primitive<ValueType>(elementStr));
-                }
-            } else {
-                // For complex types (like ProductX), serialize the element to JSON string
-                // and call the type's Deserialize method
-                StdString elementJson;
-                serializeJson(element, elementJson);
-                ValueType deserializedElement = ValueType::Deserialize(elementJson);
-                container.push_back(deserializedElement);
+        // Check if it's an Array (fixed size) and validate size
+        if constexpr (std::is_array_v<Container>) {
+            // C-style array
+            constexpr size_t arraySize = std::extent_v<Container>;
+            if (jsonArray.size() != arraySize) {
+                throw std::invalid_argument("JSON array size (" + std::to_string(jsonArray.size()) + 
+                                          ") does not match Array size (" + std::to_string(arraySize) + ")");
+            }
+        } else if constexpr (is_std_array_type<Container>::value) {
+            // std::array or Array - validate size
+            constexpr size_t arraySize = std::tuple_size_v<Container>;
+            if (jsonArray.size() != arraySize) {
+                throw std::invalid_argument("JSON array size (" + std::to_string(jsonArray.size()) + 
+                                          ") does not match Array size (" + std::to_string(arraySize) + ")");
             }
         }
         
+        // Iterate through each element in the JSON array
+        size_t index = 0;
+        for (JsonVariant element : jsonArray) {
+            deserialize_and_add_element<Container, ValueType>(container, element, index);
+            index++;
+        }
+        
         return container;
+    }
+    
+    /**
+     * Deserialize a JSON object string to an associative container (Map, UnorderedMap).
+     * 
+     * @tparam MapType The map type to deserialize to (e.g., Map<StdString, ProductX>, UnorderedMap<int, Person>)
+     * @param input The JSON object string
+     * @return The deserialized map
+     */
+    template<typename MapType>
+    static MapType deserialize_associative_container(const StdString& input) {
+        // Parse the JSON string into a JsonDocument
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, input.c_str());
+        
+        if (error != DeserializationError::Ok) {
+            throw std::invalid_argument("Failed to parse JSON: " + input);
+        }
+        
+        // Check if it's an object
+        if (!doc.is<JsonObject>()) {
+            throw std::invalid_argument("Expected JSON object, got: " + input);
+        }
+        
+        JsonObject jsonObject = doc.as<JsonObject>();
+        MapType map;
+        
+        // Get the key and value types
+        using KeyType = typename MapType::key_type;
+        using ValueType = typename MapType::mapped_type;
+        
+        // Iterate through each key-value pair in the JSON object
+        for (JsonPair pair : jsonObject) {
+            // Deserialize the key
+            KeyType key;
+            if constexpr (is_primitive_type_v<KeyType>) {
+                if constexpr (std::is_same_v<KeyType, StdString> ||
+                             std::is_same_v<KeyType, CStdString> ||
+                             std::is_same_v<KeyType, std::string>) {
+                    key = KeyType(pair.key().c_str());
+                } else if constexpr (std::is_same_v<KeyType, bool> ||
+                                     std::is_same_v<KeyType, Bool> ||
+                                     std::is_same_v<KeyType, CBool>) {
+                    StdString keyStr = StdString(pair.key().c_str());
+                    key = convert_string_to_primitive<KeyType>(keyStr);
+                } else if constexpr (std::is_integral_v<KeyType>) {
+                    StdString keyStr = StdString(pair.key().c_str());
+                    key = convert_string_to_primitive<KeyType>(keyStr);
+                } else if constexpr (std::is_floating_point_v<KeyType>) {
+                    StdString keyStr = StdString(pair.key().c_str());
+                    key = convert_string_to_primitive<KeyType>(keyStr);
+                } else {
+                    StdString keyStr = StdString(pair.key().c_str());
+                    key = convert_string_to_primitive<KeyType>(keyStr);
+                }
+            } else {
+                // For complex key types, deserialize from JSON string
+                StdString keyJson = StdString(pair.key().c_str());
+                key = KeyType::Deserialize(keyJson);
+            }
+            
+            // Deserialize the value
+            ValueType value;
+            if constexpr (is_primitive_type_v<ValueType>) {
+                // For primitive types, extract directly from JSON
+                if constexpr (std::is_same_v<ValueType, bool> ||
+                             std::is_same_v<ValueType, Bool> ||
+                             std::is_same_v<ValueType, CBool>) {
+                    value = pair.value().as<bool>();
+                } else if constexpr (std::is_same_v<ValueType, StdString> ||
+                                     std::is_same_v<ValueType, CStdString> ||
+                                     std::is_same_v<ValueType, std::string>) {
+                    const char* str = pair.value().as<const char*>();
+                    value = ValueType(str ? str : "");
+                } else if constexpr (std::is_integral_v<ValueType>) {
+                    if constexpr (std::is_signed_v<ValueType>) {
+                        value = static_cast<ValueType>(pair.value().as<int64_t>());
+                    } else {
+                        value = static_cast<ValueType>(pair.value().as<uint64_t>());
+                    }
+                } else if constexpr (std::is_floating_point_v<ValueType>) {
+                    value = static_cast<ValueType>(pair.value().as<double>());
+                } else {
+                    // Fallback for other primitive types
+                    StdString valueStr;
+                    serializeJson(pair.value(), valueStr);
+                    value = convert_string_to_primitive<ValueType>(valueStr);
+                }
+            } else {
+                // For complex types, serialize the value to JSON string and call Deserialize
+                StdString valueJson;
+                serializeJson(pair.value(), valueJson);
+                value = ValueType::Deserialize(valueJson);
+            }
+            
+            // Insert into map
+            map[key] = value;
+        }
+        
+        return map;
     }
     
     /**
