@@ -176,6 +176,37 @@ private:
         static constexpr bool value = true;
     };
     
+    // Handle StandardDefines template aliases (Vector, List, Deque, Set, UnorderedSet, Array)
+    template<typename T>
+    struct is_sequential_container<Vector<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<List<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<Deque<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<Set<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T>
+    struct is_sequential_container<UnorderedSet<T>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename T, std::size_t N>
+    struct is_sequential_container<Array<T, N>> {
+        static constexpr bool value = true;
+    };
+    
     
     // Helper variable template
     template<typename T>
@@ -210,9 +241,14 @@ private:
         static constexpr bool value = true;
     };
     
-    // Handle StandardDefines typedefs (Map)
+    // Handle StandardDefines typedefs (Map, UnorderedMap)
     template<typename Key, typename Value>
     struct is_associative_container<Map<Key, Value>> {
+        static constexpr bool value = true;
+    };
+    
+    template<typename Key, typename Value>
+    struct is_associative_container<UnorderedMap<Key, Value>> {
         static constexpr bool value = true;
     };
     
