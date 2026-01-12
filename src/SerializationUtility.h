@@ -210,9 +210,9 @@ private:
         static constexpr bool value = true;
     };
     
-    // Handle StandardDefines typedefs (std_map)
+    // Handle StandardDefines typedefs (Map)
     template<typename Key, typename Value>
-    struct is_associative_container<std_map<Key, Value>> {
+    struct is_associative_container<Map<Key, Value>> {
         static constexpr bool value = true;
     };
     
