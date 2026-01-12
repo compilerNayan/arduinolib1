@@ -91,8 +91,42 @@ public:
                 return ReturnType(); // Return empty optional
             }
             
-            // If input has a value, deserialize it
-            ValueType value = Deserialize<ValueType>(input);
+            // If parsing succeeded, extract the value from JSON
+            ValueType value;
+            if (error == DeserializationError::Ok) {
+                // For primitive types, extract directly from JSON
+                if constexpr (is_primitive_type_v<ValueType>) {
+                    if constexpr (std::is_same_v<ValueType, StdString> || std::is_same_v<ValueType, CStdString>) {
+                        // For strings, extract from JSON (handles quoted strings like "Hello World")
+                        if (doc.is<const char*>() || doc.is<StdString>()) {
+                            const char* str = doc.as<const char*>();
+                            if (str != nullptr) {
+                                value = StdString(str);
+                            } else {
+                                value = Deserialize<ValueType>(input);
+                            }
+                        } else {
+                            value = Deserialize<ValueType>(input);
+                        }
+                    } else {
+                        // For other primitives, use JSON extraction
+                        if (doc.is<ValueType>()) {
+                            value = doc.as<ValueType>();
+                        } else {
+                            value = Deserialize<ValueType>(input);
+                        }
+                    }
+                } else {
+                    // For complex types, serialize JSON back to string and deserialize
+                    StdString jsonStr;
+                    serializeJson(doc, jsonStr);
+                    value = Deserialize<ValueType>(jsonStr);
+                }
+            } else {
+                // If JSON parsing failed, try direct deserialization
+                value = Deserialize<ValueType>(input);
+            }
+            
             return ReturnType(value);
         } else if constexpr (is_primitive_type_v<ReturnType>) {
             // Convert string to primitive type
