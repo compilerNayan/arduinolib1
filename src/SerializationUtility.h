@@ -73,9 +73,6 @@ private:
             std::is_same_v<T, char> || std::is_same_v<T, unsigned char> ||
             std::is_same_v<T, bool> || std::is_same_v<T, float> ||
             std::is_same_v<T, double> || std::is_same_v<T, size_t> ||
-            // String types (treat as primitives - no Deserialize method needed)
-            std::is_same_v<T, std::string> || std::is_same_v<T, const std::string> ||
-            std::is_same_v<T, StdString> || std::is_same_v<T, CStdString> ||
             // StandardDefines types
             std::is_same_v<T, Int> || std::is_same_v<T, CInt> ||
             std::is_same_v<T, UInt> || std::is_same_v<T, CUInt> ||
@@ -85,7 +82,8 @@ private:
             std::is_same_v<T, Char> || std::is_same_v<T, CChar> ||
             std::is_same_v<T, UChar> || std::is_same_v<T, CUChar> ||
             std::is_same_v<T, Bool> || std::is_same_v<T, CBool> ||
-            std::is_same_v<T, Size> || std::is_same_v<T, CSize>;
+            std::is_same_v<T, Size> || std::is_same_v<T, CSize> ||
+            std::is_same_v<T, StdString> || std::is_same_v<T, CStdString>;
     };
     
     // Helper variable template
@@ -100,11 +98,9 @@ private:
     static StdString convert_primitive_to_string(const T& value) {
         if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, Bool> || std::is_same_v<T, CBool>) {
             return value ? "true" : "false";
-        } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, StdString>) {
-            // std::string or StdString (which is std::string), return as-is
+        } else if constexpr (std::is_same_v<T, StdString>) {
             return value;
-        } else if constexpr (std::is_same_v<T, const std::string> || std::is_same_v<T, CStdString>) {
-            // const std::string or CStdString (const), convert to StdString
+        } else if constexpr (std::is_same_v<T, CStdString>) {
             return StdString(value);
         } else {
             std::ostringstream oss;
@@ -133,12 +129,9 @@ private:
             } else {
                 throw std::invalid_argument("Invalid boolean value: " + input);
             }
-        } else if constexpr (std::is_same_v<T, std::string> || std::is_same_v<T, StdString>) {
-            // std::string or StdString (which is std::string), return as-is (no conversion needed)
+        } else if constexpr (std::is_same_v<T, StdString> || std::is_same_v<T, CStdString>) {
+            // Already a string, just return it
             return input;
-        } else if constexpr (std::is_same_v<T, const std::string> || std::is_same_v<T, CStdString>) {
-            // const std::string or CStdString (const), convert to StdString
-            return StdString(input);
         } else if constexpr (std::is_integral_v<T>) {
             // Integer types
             try {
