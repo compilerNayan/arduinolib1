@@ -315,13 +315,20 @@ private:
         JsonDocument doc;
         JsonArray array = doc.to<JsonArray>();
         
-        for (const auto& element : container) {
-            if constexpr (is_primitive_type_v<typename Container::value_type>) {
-                // For primitives, add directly to array
-                if constexpr (std::is_same_v<typename Container::value_type, bool> || 
-                              std::is_same_v<typename Container::value_type, Bool> ||
-                              std::is_same_v<typename Container::value_type, CBool>) {
-                    array.add(element);
+        // Special handling for vector<bool> which uses a proxy type
+        if constexpr (std::is_same_v<Container, std::vector<bool>> || std::is_same_v<Container, vector<bool>>) {
+            for (size_t i = 0; i < container.size(); ++i) {
+                bool boolValue = container[i];
+                array.add(boolValue);
+            }
+        } else {
+            for (const auto& element : container) {
+                if constexpr (is_primitive_type_v<typename Container::value_type>) {
+                    // For primitives, add directly to array
+                    if constexpr (std::is_same_v<typename Container::value_type, bool> || 
+                                  std::is_same_v<typename Container::value_type, Bool> ||
+                                  std::is_same_v<typename Container::value_type, CBool>) {
+                        array.add(element);
                 } else if constexpr (std::is_same_v<typename Container::value_type, StdString> ||
                                      std::is_same_v<typename Container::value_type, CStdString> ||
                                      std::is_same_v<typename Container::value_type, std::string>) {
@@ -340,16 +347,17 @@ private:
                         array.add(elementJson.c_str());
                     }
                 }
-            } else {
-                // For complex types, serialize to JSON string, then parse and add
-                StdString elementJson = Serialize(element);
-                JsonDocument elementDoc;
-                DeserializationError error = deserializeJson(elementDoc, elementJson.c_str());
-                if (error == DeserializationError::Ok) {
-                    array.add(elementDoc.as<JsonVariant>());
                 } else {
-                    // If parsing fails, add as string (shouldn't happen for valid JSON)
-                    array.add(elementJson.c_str());
+                    // For complex types, serialize to JSON string, then parse and add
+                    StdString elementJson = Serialize(element);
+                    JsonDocument elementDoc;
+                    DeserializationError error = deserializeJson(elementDoc, elementJson.c_str());
+                    if (error == DeserializationError::Ok) {
+                        array.add(elementDoc.as<JsonVariant>());
+                    } else {
+                        // If parsing fails, add as string (shouldn't happen for valid JSON)
+                        array.add(elementJson.c_str());
+                    }
                 }
             }
         }
