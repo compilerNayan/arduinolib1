@@ -58,8 +58,8 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
-    # Pattern for /// @NotNull or ///@NotNull annotation (ignoring whitespace)
-    notnull_annotation_pattern = r'///\s*@NotNull\b'
+    # Pattern for /* @NotNull */ or /*@NotNull*/ annotation (ignoring whitespace)
+    notnull_annotation_pattern = r'/\*\s*@NotNull\s*\*/'
     # Field pattern: matches "int a;", "Public optional<int> x;", "Private optional<int> x;", etc.
     # Handles both with and without Public/Private/Protected prefix
     field_pattern = r'^\s*(?:Public|Private|Protected)?\s*([A-Za-z_][A-Za-z0-9_<>*&,\s]*?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[;=]'
@@ -67,11 +67,12 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
     for i, line in enumerate(class_lines):
         stripped = line.strip()
         
-        # Skip comments (but not the annotation itself which is in a comment)
-        if stripped.startswith('/*'):
+        # Skip other comments that aren't @NotNull annotations
+        # But allow /* @NotNull */ annotations to be processed
+        if stripped.startswith('/*') and not re.search(notnull_annotation_pattern, stripped):
             continue
-        # Skip other single-line comments that aren't the annotation
-        if stripped.startswith('//') and not re.search(notnull_annotation_pattern, stripped):
+        # Skip single-line comments
+        if stripped.startswith('//'):
             continue
         
         # Skip empty lines
@@ -84,18 +85,19 @@ def extract_notnull_fields(file_path: str, class_name: str) -> List[Dict[str, st
             current_access = access_match.group(1).lower()
             continue
         
-        # Check for @NotNull annotation (/// @NotNull or ///@NotNull)
+        # Check for @NotNull annotation (/* @NotNull */ or /*@NotNull*/)
         notnull_match = re.search(notnull_annotation_pattern, stripped)
         if notnull_match:
             # Look ahead for field declaration (within next 5 lines)
             for j in range(i + 1, min(i + 6, len(class_lines))):
                 next_line = class_lines[j].strip()
                 
-                # Skip comments (but not the annotation itself)
-                if next_line.startswith('/*'):
+                # Skip other comments that aren't annotations
+                # But allow /* @NotNull */, /* @NotBlank */, etc. annotations to be processed
+                if next_line.startswith('/*') and not re.search(r'/\*\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\s*\*/', next_line):
                     continue
-                # Skip other single-line comments that aren't annotations
-                if next_line.startswith('//') and not re.search(r'///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\b', next_line):
+                # Skip single-line comments
+                if next_line.startswith('//'):
                     continue
                 
                 # Skip empty lines

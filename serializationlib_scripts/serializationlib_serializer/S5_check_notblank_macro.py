@@ -89,10 +89,10 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
     
     # Patterns
     access_pattern = r'^\s*(public|private|protected)\s*:'
-    # Pattern for /// @NotBlank or ///@NotBlank annotation (ignoring whitespace)
-    notblank_annotation_pattern = r'///\s*@NotBlank\b'
-    # Pattern for /// @NotNull or ///@NotNull annotation (can appear between @NotBlank and field)
-    notnull_annotation_pattern = r'///\s*@NotNull\b'
+    # Pattern for /* @NotBlank */ or /*@NotBlank*/ annotation (ignoring whitespace)
+    notblank_annotation_pattern = r'/\*\s*@NotBlank\s*\*/'
+    # Pattern for /* @NotNull */ or /*@NotNull*/ annotation (can appear between @NotBlank and field)
+    notnull_annotation_pattern = r'/\*\s*@NotNull\s*\*/'
     # Field pattern: matches "int a;", "optional<StdString> x;" with optional access specifier
     field_pattern = r'^\s*(?:Public|Private|Protected)?\s*([A-Za-z_][A-Za-z0-9_<>*&,\s]*?)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[;=]'
     
@@ -101,12 +101,13 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
         line = class_lines[i]
         stripped = line.strip()
         
-        # Skip comments (but not the annotation itself which is in a comment)
-        if stripped.startswith('/*'):
+        # Skip other comments that aren't @NotBlank annotations
+        # But allow /* @NotBlank */ annotations to be processed
+        if stripped.startswith('/*') and not re.search(notblank_annotation_pattern, stripped):
             i += 1
             continue
-        # Skip other single-line comments that aren't the annotation
-        if stripped.startswith('//') and not re.search(notblank_annotation_pattern, stripped):
+        # Skip single-line comments
+        if stripped.startswith('//'):
             i += 1
             continue
         
@@ -122,7 +123,7 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
             i += 1
             continue
         
-        # Check for @NotBlank annotation (/// @NotBlank or ///@NotBlank)
+        # Check for @NotBlank annotation (/* @NotBlank */ or /*@NotBlank*/)
         notblank_match = re.search(notblank_annotation_pattern, stripped)
         if notblank_match:
             # Look ahead for field declaration (within next 10 lines, may have @NotNull in between)
@@ -130,11 +131,12 @@ def extract_notblank_fields(file_path: str, class_name: str) -> List[Dict[str, s
             for j in range(i + 1, min(i + 11, len(class_lines))):
                 next_line = class_lines[j].strip()
                 
-                # Skip comments (but not the annotation itself)
-                if next_line.startswith('/*'):
+                # Skip other comments that aren't annotations
+                # But allow /* @NotNull */, /* @NotBlank */, etc. annotations to be processed
+                if next_line.startswith('/*') and not re.search(r'/\*\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\s*\*/', next_line):
                     continue
-                # Skip other single-line comments that aren't annotations
-                if next_line.startswith('//') and not re.search(r'///\s*@(NotNull|NotEmpty|NotBlank|Id|Entity|Serializable)\b', next_line):
+                # Skip single-line comments
+                if next_line.startswith('//'):
                     continue
                 
                 # Skip empty lines

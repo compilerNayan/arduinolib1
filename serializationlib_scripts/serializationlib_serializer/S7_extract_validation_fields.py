@@ -113,11 +113,11 @@ def extract_validation_fields(file_path: str, class_name: str, validation_macros
     if not macro_names:
         return {}
     
-    # Create pattern to match any validation annotation (/// @NotNull, /// @NotEmpty, /// @NotBlank, etc.)
-    # Map macro names to annotation patterns (e.g., 'NotNull' -> '@NotNull')
+    # Create pattern to match any validation annotation (/* @NotNull */, /* @NotEmpty */, /* @NotBlank */, etc.)
+    # Map macro names to annotation patterns (e.g., 'NotNull' -> '/* @NotNull */')
     annotation_patterns = {}
     for macro_name in macro_names:
-        annotation_patterns[macro_name] = rf'///\s*@{re.escape(macro_name)}\b'
+        annotation_patterns[macro_name] = rf'/\*\s*@{re.escape(macro_name)}\s*\*/'
     
     # Combined pattern to match any validation annotation
     all_annotations = '|'.join(annotation_patterns.values())

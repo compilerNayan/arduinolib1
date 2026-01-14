@@ -436,33 +436,33 @@ def mark_dto_annotation_processed(file_path: str, dry_run: bool = False, seriali
         modified_lines = []
         
         # Pattern for processed annotation
-        processed_pattern = rf'^/\*\s*{re.escape(annotation_name)}\s*\*/\s*$'
-        # Pattern for annotation to process
-        annotation_pattern = rf'^///\s*{re.escape(annotation_name)}\s*$'
+        processed_pattern = rf'^/\*--\s*{re.escape(annotation_name)}\s*--\*/\s*$'
+        # Pattern for annotation to process (/* @Entity */ or /*@Entity*/)
+        annotation_pattern = rf'^/\*\s*{re.escape(annotation_name)}\s*\*/\s*$'
         
         for i, line in enumerate(lines):
             original_line = line
             stripped_line = line.strip()
             
-            # Check if line is already processed (/* @Entity */ or /* @Serializable */)
+            # Check if line is already processed (/*--@Entity--*/ or /*--@Serializable--*/)
             if re.match(processed_pattern, stripped_line):
                 modified_lines.append(line)
                 continue
             
-            # Check if line contains /// @Entity or ///@Entity or /// @Serializable or ///@Serializable annotation
+            # Check if line contains /* @Entity */ or /*@Entity*/ or /* @Serializable */ or /*@Serializable*/ annotation
             if re.match(annotation_pattern, stripped_line):
                 # Replace with processed marker, preserving original indentation
                 if line.startswith(' '):
                     # Has indentation, preserve it
                     indent = len(line) - len(line.lstrip())
                     if not dry_run:
-                        modified_lines.append(' ' * indent + f'/* {annotation_name} */\n')
+                        modified_lines.append(' ' * indent + f'/*--{annotation_name}--*/\n')
                     else:
                         modified_lines.append(line)  # Keep original for dry run display
                 else:
                     # No indentation
                     if not dry_run:
-                        modified_lines.append(f'/* {annotation_name} */\n')
+                        modified_lines.append(f'/*--{annotation_name}--*/\n')
                     else:
                         modified_lines.append(line)  # Keep original for dry run display
                 modified = True
