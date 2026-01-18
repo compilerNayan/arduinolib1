@@ -23,6 +23,7 @@ namespace nayan {
 namespace serializer {
 
 /**
+
  * Generic Serialization Utility
  * Provides a static template method to serialize any type.
  * 
@@ -51,6 +52,14 @@ public:
                 // If optional is empty, return empty JSON string
                 return "";
             }
+        } else if constexpr (std::is_enum_v<T>) {
+            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+            // The specialization will be automatically selected by the compiler if it exists
+            // If no specialization exists, this will fall through and cause a compilation error
+            // (enums don't have Serialize() method), which ensures specializations are generated
+            // For now, convert to underlying integer as fallback (specialization should override this)
+            using UnderlyingType = typename std::underlying_type<T>::type;
+            return convert_primitive_to_string(static_cast<UnderlyingType>(value));
         } else if constexpr (is_primitive_type_v<T>) {
             // Convert primitive type to string
             return convert_primitive_to_string(value);
@@ -116,6 +125,9 @@ public:
                             value = Deserialize<ValueType>(input);
                         }
                     }
+                } else if constexpr (std::is_enum_v<ValueType>) {
+                    // For enum types, use template specialization if available
+                    value = Deserialize<ValueType>(input);
                 } else {
                     // For complex types, serialize JSON back to string and deserialize
                     StdString jsonStr;
@@ -128,6 +140,15 @@ public:
             }
             
             return ReturnType(value);
+        } else if constexpr (std::is_enum_v<ReturnType>) {
+            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+            // The specialization will be automatically selected by the compiler if it exists
+            // If no specialization exists, this will fall through and cause a compilation error
+            // (enums don't have Deserialize() method), which ensures specializations are generated
+            // For now, convert from underlying integer as fallback (specialization should override this)
+            using UnderlyingType = typename std::underlying_type<ReturnType>::type;
+            UnderlyingType intValue = convert_string_to_primitive<UnderlyingType>(input);
+            return static_cast<ReturnType>(intValue);
         } else if constexpr (is_primitive_type_v<ReturnType>) {
             // Convert string to primitive type
             return convert_string_to_primitive<ReturnType>(input);
