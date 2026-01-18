@@ -181,6 +181,11 @@ spec_s3 = importlib.util.spec_from_file_location("S3_inject_serialization", os.p
 S3_inject_serialization = importlib.util.module_from_spec(spec_s3)
 spec_s3.loader.exec_module(S3_inject_serialization)
 
+# Import enum serialization script
+spec_s8 = importlib.util.spec_from_file_location("S8_handle_enum_serialization", os.path.join(script_dir, "S8_handle_enum_serialization.py"))
+S8_handle_enum_serialization = importlib.util.module_from_spec(spec_s8)
+spec_s8.loader.exec_module(S8_handle_enum_serialization)
+
 
 def discover_all_libraries(project_dir):
     """
@@ -312,7 +317,35 @@ def process_all_serializable_classes(dry_run=False, serializable_macro=None):
         if not os.path.exists(file_path):
             continue
         
-        # Check if file has @Serializable annotation
+        # First, check if file has enum with @Serializable annotation
+        enum_info = S8_handle_enum_serialization.check_enum_annotation(file_path, serializable_macro)
+        if enum_info and enum_info.get('has_enum'):
+            # Process enum serialization
+            if not dry_run:
+                enum_name = enum_info['enum_name']
+                enum_line = enum_info['enum_line']
+                annotation_line = enum_info['annotation_line']
+                
+                # Extract enum values
+                enum_values = S8_handle_enum_serialization.extract_enum_values(file_path, enum_name, enum_line)
+                
+                if enum_values:
+                    # Generate code
+                    code = S8_handle_enum_serialization.generate_enum_serialization_code(enum_name, enum_values)
+                    
+                    # Add necessary includes
+                    S8_handle_enum_serialization.add_include_if_needed(file_path, "<SerializationUtility.h>")
+                    S8_handle_enum_serialization.add_include_if_needed(file_path, "<algorithm>")
+                    S8_handle_enum_serialization.add_include_if_needed(file_path, "<cctype>")
+                    
+                    # Inject code
+                    success = S8_handle_enum_serialization.inject_enum_code(file_path, code, dry_run=False)
+                    if success:
+                        # Mark annotation as processed
+                        S8_handle_enum_serialization.mark_enum_annotation_processed(file_path, annotation_line, dry_run=False)
+                        processed_count += 1
+        
+        # Check if file has @Serializable annotation (for classes)
         dto_info = S1_check_dto_macro.check_dto_macro(file_path, serializable_macro)
         
         if not dto_info or not dto_info.get('has_dto'):

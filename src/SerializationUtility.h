@@ -52,6 +52,11 @@ public:
                 // If optional is empty, return empty JSON string
                 return "";
             }
+        } else if constexpr (std::is_enum_v<T>) {
+            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+            // The specialization will be automatically selected by the compiler if it exists
+            // This recursive call will use the specialization if available, otherwise it will fail to compile
+            return Serialize<T>(value);
         } else if constexpr (is_primitive_type_v<T>) {
             // Convert primitive type to string
             return convert_primitive_to_string(value);
@@ -129,6 +134,11 @@ public:
             }
             
             return ReturnType(value);
+        } else if constexpr (std::is_enum_v<ReturnType>) {
+            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+            // The specialization will be automatically selected by the compiler if it exists
+            // This recursive call will use the specialization if available, otherwise it will fail to compile
+            return Deserialize<ReturnType>(input);
         } else if constexpr (is_primitive_type_v<ReturnType>) {
             // Convert string to primitive type
             return convert_string_to_primitive<ReturnType>(input);
