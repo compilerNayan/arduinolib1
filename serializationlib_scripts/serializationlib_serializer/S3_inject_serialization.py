@@ -182,9 +182,9 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
             elif is_primitive:
                 code_lines.append(f"            doc[\"{field_name}\"] = {field_name}.value();")
             else:
-                # For nested object types in optional
-                code_lines.append(f"            // Serialize nested object: {field_name}")
-                code_lines.append(f"            StdString {field_name}_json = {field_name}.value().Serialize();")
+                # For nested object types in optional (including enums)
+                code_lines.append(f"            // Serialize nested object or enum: {field_name}")
+                code_lines.append(f"            StdString {field_name}_json = nayan::serializer::SerializeValue({field_name}.value());")
                 code_lines.append(f"            JsonDocument {field_name}_doc;")
                 code_lines.append(f"            deserializeJson({field_name}_doc, {field_name}_json.c_str());")
                 code_lines.append(f"            doc[\"{field_name}\"] = {field_name}_doc;")
@@ -362,12 +362,12 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
                     else:
                         code_lines.append(f"        obj.{field_name} = doc[\"{field_name}\"].as<{inner_type}>();")
                 else:
-                    # For nested object types in optional
-                    code_lines.append(f"        // Deserialize nested object: {field_name}")
+                    # For nested object types in optional (including enums)
+                    code_lines.append(f"        // Deserialize nested object or enum: {field_name}")
                     code_lines.append(f"        JsonObject {field_name}_obj = doc[\"{field_name}\"].as<JsonObject>();")
                     code_lines.append(f"        StdString {field_name}_json;")
                     code_lines.append(f"        serializeJson({field_name}_obj, {field_name}_json);")
-                    code_lines.append(f"        obj.{field_name} = {inner_type}::Deserialize({field_name}_json);")
+                    code_lines.append(f"        obj.{field_name} = nayan::serializer::DeserializeValue<{inner_type}>({field_name}_json);")
             else:
                 code_lines.append(f"        // Deserialize optional field: {field_name}")
                 code_lines.append(f"        if (!doc[\"{field_name}\"].isNull()) {{")
@@ -389,12 +389,12 @@ def generate_serialization_methods(class_name: str, fields: List[Dict[str, str]]
                     else:
                         code_lines.append(f"            obj.{field_name} = doc[\"{field_name}\"].as<{inner_type}>();")
                 else:
-                    # For nested object types in optional
-                    code_lines.append(f"            // Deserialize nested object: {field_name}")
+                    # For nested object types in optional (including enums)
+                    code_lines.append(f"            // Deserialize nested object or enum: {field_name}")
                     code_lines.append(f"            JsonObject {field_name}_obj = doc[\"{field_name}\"].as<JsonObject>();")
                     code_lines.append(f"            StdString {field_name}_json;")
                     code_lines.append(f"            serializeJson({field_name}_obj, {field_name}_json);")
-                    code_lines.append(f"            obj.{field_name} = {inner_type}::Deserialize({field_name}_json);")
+                    code_lines.append(f"            obj.{field_name} = nayan::serializer::DeserializeValue<{inner_type}>({field_name}_json);")
                 
                 code_lines.append(f"        }}")
                 # Note: If key doesn't exist or is null, optional remains unset (default state)
