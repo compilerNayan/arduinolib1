@@ -52,11 +52,6 @@ public:
                 // If optional is empty, return empty JSON string
                 return "";
             }
-        } else if constexpr (std::is_enum_v<T>) {
-            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
-            // The specialization will be automatically selected by the compiler if it exists
-            // This recursive call will use the specialization if available, otherwise it will fail to compile
-            return Serialize<T>(value);
         } else if constexpr (is_primitive_type_v<T>) {
             // Convert primitive type to string
             return convert_primitive_to_string(value);
@@ -66,6 +61,14 @@ public:
         } else if constexpr (is_associative_container_v<T>) {
             // Handle associative containers (map, unordered_map)
             return serialize_associative_container(value);
+        } else if constexpr (std::is_enum_v<T>) {
+            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+            // If no specialization exists, this will cause a compilation error
+            // We can't call value.Serialize() because enums don't have that method
+            // The specialization must exist for enums to work
+            // Use a dependent static_assert that only fails when T is an enum
+            static_assert(std::is_enum_v<T> && false, "Enum serialization specialization not found. Run S8_handle_enum_serialization.py for this enum.");
+            return StdString(); // This line will never be reached due to static_assert
         } else {
             // Call the type's Serialize method
             return value.Serialize();
@@ -134,11 +137,6 @@ public:
             }
             
             return ReturnType(value);
-        } else if constexpr (std::is_enum_v<ReturnType>) {
-            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
-            // The specialization will be automatically selected by the compiler if it exists
-            // This recursive call will use the specialization if available, otherwise it will fail to compile
-            return Deserialize<ReturnType>(input);
         } else if constexpr (is_primitive_type_v<ReturnType>) {
             // Convert string to primitive type
             return convert_string_to_primitive<ReturnType>(input);
@@ -148,6 +146,14 @@ public:
         } else if constexpr (is_associative_container_v<ReturnType>) {
             // Handle associative containers (Map, UnorderedMap)
             return deserialize_associative_container<ReturnType>(input);
+        } else if constexpr (std::is_enum_v<ReturnType>) {
+            // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+            // If no specialization exists, this will cause a compilation error
+            // We can't call ReturnType::Deserialize() because enums don't have that method
+            // The specialization must exist for enums to work
+            // Use a dependent static_assert that only fails when ReturnType is an enum
+            static_assert(std::is_enum_v<ReturnType> && false, "Enum deserialization specialization not found. Run S8_handle_enum_serialization.py for this enum.");
+            return ReturnType(); // This line will never be reached due to static_assert
         } else {
             // Call the type's Deserialize method
             return ReturnType::Deserialize(input);
@@ -789,8 +795,11 @@ StdString SerializeValue(const T& value) {
         // Handle primitive types
         return SerializationUtility::convert_primitive_to_string(value);
     } else if constexpr (std::is_enum_v<T>) {
-        // Handle enum types - use template specialization if available
-        // The specialization will be automatically selected by the compiler
+        // Handle enum types - template specialization should be provided by S8_handle_enum_serialization.py
+        // The specialization will be automatically selected by the compiler when calling Serialize<T>
+        // We need to explicitly call it to use the specialization
+        // Note: This will use the specialization if it exists, otherwise it will fail to compile
+        // which is what we want - enums must have specializations
         return SerializationUtility::Serialize<T>(value);
     } else {
         // Handle serializable objects - call .Serialize() method
