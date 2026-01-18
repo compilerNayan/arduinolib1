@@ -56,9 +56,13 @@ def check_enum_annotation(file_path: str, serializable_annotation: str = "Serial
         annotation_match = re.search(annotation_pattern, stripped_line)
         if annotation_match:
             # Look ahead for enum declaration (within next 20 lines to allow for comments/macros)
-            for i in range(line_num, min(line_num + 21, len(lines) + 1)):
+            for i in range(line_num + 1, min(line_num + 21, len(lines) + 1)):  # Start from next line
                 if i <= len(lines):
                     next_line = lines[i - 1].strip()
+                    
+                    # Skip empty lines
+                    if not next_line:
+                        continue
                     
                     # Skip comments (but not the annotation itself)
                     if next_line.startswith('/*') and not re.search(processed_pattern, next_line):
@@ -77,14 +81,7 @@ def check_enum_annotation(file_path: str, serializable_annotation: str = "Serial
                             'enum_line': i
                         }
                     
-                    # Stop if we hit something that's not an annotation, comment, or enum
-                    known_macros = ('DefineStandardTypes', 'DEFINE', 'PUBLIC', 'PRIVATE', 'PROTECTED')
-                    if next_line and not (next_line.startswith(known_macros) or 
-                                         re.search(annotation_pattern, next_line) or
-                                         next_line.startswith('//')):
-                        # If it's not empty and not a known macro, might be something else
-                        if next_line and not next_line.startswith('/*'):
-                            break
+                    # Continue searching - don't break early, allow for other text between annotation and enum
     
     return {
         'has_enum': False
@@ -112,6 +109,7 @@ def extract_enum_values(file_path: str, enum_name: str, enum_line: int) -> List[
     enum_values = []
     brace_count = 0
     in_enum = False
+    found_opening_brace = False
     
     # Start from enum line
     for i in range(enum_line - 1, len(lines)):
@@ -122,28 +120,40 @@ def extract_enum_values(file_path: str, enum_name: str, enum_line: int) -> List[
         if f'enum' in stripped and enum_name in stripped:
             in_enum = True
             brace_count = stripped.count('{') - stripped.count('}')
+            if '{' in stripped:
+                found_opening_brace = True
             continue
         
         if in_enum:
+            # Track opening brace
+            if '{' in stripped:
+                found_opening_brace = True
+            
             brace_count += stripped.count('{')
             brace_count -= stripped.count('}')
             
-            # Extract enum values (before comma, ignoring comments)
-            # Pattern: ValueName, or ValueName = value, or ValueName // comment
-            value_pattern = r'([A-Za-z_][A-Za-z0-9_]*)\s*(?:=\s*[^,}]+)?\s*(?:,|//|/\*|$)'
+            # Only extract values if we've found the opening brace
+            if found_opening_brace:
+                # Remove comments from line for parsing
+                line_no_comments = re.sub(r'//.*$', '', stripped)  # Remove // comments
+                line_no_comments = re.sub(r'/\*.*?\*/', '', line_no_comments)  # Remove /* */ comments
+                
+                # Extract enum values - pattern: ValueName (optionally followed by = value or comma)
+                # Match: identifier at start of line or after comma/whitespace, before comma or }
+                value_pattern = r'(?:^|\s|,)([A-Za-z_][A-Za-z0-9_]*)\s*(?:=\s*[^,}]+)?\s*(?=,|}|$)'
+                
+                # Find all enum values in this line
+                for match in re.finditer(value_pattern, line_no_comments):
+                    value_name = match.group(1).strip()
+                    # Filter out common keywords and the enum name itself
+                    if (value_name and 
+                        value_name not in enum_values and 
+                        value_name != enum_name and
+                        value_name not in ['if', 'endif', 'define', 'include', 'pragma']):
+                        enum_values.append(value_name)
             
-            # Remove comments from line for parsing
-            line_no_comments = re.sub(r'//.*$', '', stripped)  # Remove // comments
-            line_no_comments = re.sub(r'/\*.*?\*/', '', line_no_comments)  # Remove /* */ comments
-            
-            # Find all enum values in this line
-            for match in re.finditer(value_pattern, line_no_comments):
-                value_name = match.group(1).strip()
-                if value_name and value_name not in enum_values:
-                    enum_values.append(value_name)
-            
-            # If braces are balanced, we're done
-            if brace_count == 0 and '{' in stripped:
+            # If braces are balanced and we found the opening brace, we're done
+            if brace_count == 0 and found_opening_brace:
                 break
     
     return enum_values
@@ -346,9 +356,13 @@ def inject_enum_code(file_path: str, code: str, dry_run: bool = False) -> bool:
     file_content = ''.join(lines)
     if 'Serialize<' in file_content and 'Deserialize<' in file_content:
         # Check if it's for this enum specifically
-        if f'Serialize<{code.split(\"Serialize<\")[1].split(\">\")[0]}' in file_content:
-            # Already exists
-            return True
+        # Extract enum name from code
+        serialize_match = re.search(r'Serialize<([A-Za-z_][A-Za-z0-9_]*)>', code)
+        if serialize_match:
+            enum_name = serialize_match.group(1)
+            if f'Serialize<{enum_name}>' in file_content:
+                # Already exists
+                return True
     
     if dry_run:
         return True
