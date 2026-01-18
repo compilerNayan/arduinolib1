@@ -22,93 +22,6 @@
 namespace nayan {
 namespace serializer {
 
-// Forward declaration
-class SerializationUtility;
-
-/**
- * Helper function to serialize a value.
- * Handles primitives, enums (via template specialization), and serializable objects.
- * 
- * @tparam T The type to serialize
- * @param value The value to serialize
- * @return StdString representation of the value
- */
-template<typename T>
-StdString SerializeValue(const T& value) {
-    // Check if primitive type
-    constexpr bool is_primitive = 
-        std::is_same_v<T, int> || std::is_same_v<T, unsigned int> ||
-        std::is_same_v<T, long> || std::is_same_v<T, unsigned long> ||
-        std::is_same_v<T, short> || std::is_same_v<T, unsigned short> ||
-        std::is_same_v<T, char> || std::is_same_v<T, unsigned char> ||
-        std::is_same_v<T, bool> || std::is_same_v<T, float> ||
-        std::is_same_v<T, double> || std::is_same_v<T, size_t> ||
-        std::is_same_v<T, Int> || std::is_same_v<T, CInt> ||
-        std::is_same_v<T, UInt> || std::is_same_v<T, CUInt> ||
-        std::is_same_v<T, Long> || std::is_same_v<T, CLong> ||
-        std::is_same_v<T, ULong> || std::is_same_v<T, CULong> ||
-        std::is_same_v<T, UInt8> ||
-        std::is_same_v<T, Char> || std::is_same_v<T, CChar> ||
-        std::is_same_v<T, UChar> || std::is_same_v<T, CUChar> ||
-        std::is_same_v<T, Bool> || std::is_same_v<T, CBool> ||
-        std::is_same_v<T, Size> || std::is_same_v<T, CSize> ||
-        std::is_same_v<T, StdString> || std::is_same_v<T, CStdString>;
-    
-    if constexpr (is_primitive) {
-        // Handle primitive types
-        return SerializationUtility::convert_primitive_to_string(value);
-    } else if constexpr (std::is_enum_v<T>) {
-        // Handle enum types - use template specialization if available
-        // The specialization will be automatically selected by the compiler
-        return SerializationUtility::Serialize<T>(value);
-    } else {
-        // Handle serializable objects - call .Serialize() method
-        return value.Serialize();
-    }
-}
-
-/**
- * Helper function to deserialize a value.
- * Handles primitives, enums (via template specialization), and serializable objects.
- * 
- * @tparam ReturnType The type to deserialize to
- * @param input The string input to deserialize
- * @return The deserialized value of type ReturnType
- */
-template<typename ReturnType>
-ReturnType DeserializeValue(const StdString& input) {
-    // Check if primitive type
-    constexpr bool is_primitive = 
-        std::is_same_v<ReturnType, int> || std::is_same_v<ReturnType, unsigned int> ||
-        std::is_same_v<ReturnType, long> || std::is_same_v<ReturnType, unsigned long> ||
-        std::is_same_v<ReturnType, short> || std::is_same_v<ReturnType, unsigned short> ||
-        std::is_same_v<ReturnType, char> || std::is_same_v<ReturnType, unsigned char> ||
-        std::is_same_v<ReturnType, bool> || std::is_same_v<ReturnType, float> ||
-        std::is_same_v<ReturnType, double> || std::is_same_v<ReturnType, size_t> ||
-        std::is_same_v<ReturnType, Int> || std::is_same_v<ReturnType, CInt> ||
-        std::is_same_v<ReturnType, UInt> || std::is_same_v<ReturnType, CUInt> ||
-        std::is_same_v<ReturnType, Long> || std::is_same_v<ReturnType, CLong> ||
-        std::is_same_v<ReturnType, ULong> || std::is_same_v<ReturnType, CULong> ||
-        std::is_same_v<ReturnType, UInt8> ||
-        std::is_same_v<ReturnType, Char> || std::is_same_v<ReturnType, CChar> ||
-        std::is_same_v<ReturnType, UChar> || std::is_same_v<ReturnType, CUChar> ||
-        std::is_same_v<ReturnType, Bool> || std::is_same_v<ReturnType, CBool> ||
-        std::is_same_v<ReturnType, Size> || std::is_same_v<ReturnType, CSize> ||
-        std::is_same_v<ReturnType, StdString> || std::is_same_v<ReturnType, CStdString>;
-    
-    if constexpr (is_primitive) {
-        // Handle primitive types
-        return SerializationUtility::convert_string_to_primitive<ReturnType>(input);
-    } else if constexpr (std::is_enum_v<ReturnType>) {
-        // Handle enum types - use template specialization if available
-        // The specialization will be automatically selected by the compiler
-        return SerializationUtility::Deserialize<ReturnType>(input);
-    } else {
-        // Handle serializable objects - call static Deserialize() method
-        return ReturnType::Deserialize(input);
-    }
-}
-
 /**
 
  * Generic Serialization Utility
@@ -278,14 +191,14 @@ public:
     template<typename T>
     static constexpr bool is_primitive_type_v = is_primitive_type<T>::value;
     
-    // Make convert functions accessible to helper functions
+    /**
+     * Type trait to check if a type is a sequential container.
+     * Includes: vector, list, deque, set, unordered_set, array, forward_list
+     */
     template<typename T>
-    static StdString convert_primitive_to_string(const T& value);
-    
-    template<typename T>
-    static T convert_string_to_primitive(const StdString& input);
-    
-    // Type traits are now defined in namespace scope above
+    struct is_sequential_container {
+        static constexpr bool value = false;
+    };
     
     template<typename T, typename Alloc>
     struct is_sequential_container<std::vector<T, Alloc>> {
@@ -581,6 +494,11 @@ public:
                 serializeJson(element, elementStr);
                 deserializedValue = convert_string_to_primitive<ValueType>(elementStr);
             }
+        } else if constexpr (std::is_enum_v<ValueType>) {
+            // For enums, deserialize from string
+            StdString elementStr;
+            serializeJson(element, elementStr); // Convert JsonVariant to string
+            deserializedValue = SerializationUtility::Deserialize<ValueType>(elementStr);
         } else {
             // For complex types (like ProductX), serialize the element to JSON string
             // and call the type's Deserialize method
@@ -848,8 +766,95 @@ public:
     }
 };
 
-} // namespace serialization
+/**
+ * Helper function to serialize a value.
+ * Handles primitives, enums (via template specialization), and serializable objects.
+ * 
+ * @tparam T The type to serialize
+ * @param value The value to serialize
+ * @return StdString representation of the value
+ */
+template<typename T>
+StdString SerializeValue(const T& value) {
+    // Check if primitive type
+    constexpr bool is_primitive = 
+        std::is_same_v<T, int> || std::is_same_v<T, unsigned int> ||
+        std::is_same_v<T, long> || std::is_same_v<T, unsigned long> ||
+        std::is_same_v<T, short> || std::is_same_v<T, unsigned short> ||
+        std::is_same_v<T, char> || std::is_same_v<T, unsigned char> ||
+        std::is_same_v<T, bool> || std::is_same_v<T, float> ||
+        std::is_same_v<T, double> || std::is_same_v<T, size_t> ||
+        std::is_same_v<T, Int> || std::is_same_v<T, CInt> ||
+        std::is_same_v<T, UInt> || std::is_same_v<T, CUInt> ||
+        std::is_same_v<T, Long> || std::is_same_v<T, CLong> ||
+        std::is_same_v<T, ULong> || std::is_same_v<T, CULong> ||
+        std::is_same_v<T, UInt8> ||
+        std::is_same_v<T, Char> || std::is_same_v<T, CChar> ||
+        std::is_same_v<T, UChar> || std::is_same_v<T, CUChar> ||
+        std::is_same_v<T, Bool> || std::is_same_v<T, CBool> ||
+        std::is_same_v<T, Size> || std::is_same_v<T, CSize> ||
+        std::is_same_v<T, StdString> || std::is_same_v<T, CStdString>;
+    
+    if constexpr (is_primitive) {
+        // Handle primitive types
+        return SerializationUtility::convert_primitive_to_string(value);
+    } else if constexpr (std::is_enum_v<T>) {
+        // Handle enum types - use template specialization if available
+        // The specialization will be automatically selected by the compiler
+        return SerializationUtility::Serialize<T>(value);
+    } else {
+        // Handle serializable objects - call .Serialize() method
+        return value.Serialize();
+    }
+}
+
+/**
+ * Helper function to deserialize a value.
+ * Handles primitives, enums (via template specialization), containers, and serializable objects.
+ * 
+ * @tparam ReturnType The type to deserialize to
+ * @param input The string input to deserialize
+ * @return The deserialized value of type ReturnType
+ */
+template<typename ReturnType>
+ReturnType DeserializeValue(const StdString& input) {
+    // Check if primitive type
+    constexpr bool is_primitive = 
+        std::is_same_v<ReturnType, int> || std::is_same_v<ReturnType, unsigned int> ||
+        std::is_same_v<ReturnType, long> || std::is_same_v<ReturnType, unsigned long> ||
+        std::is_same_v<ReturnType, short> || std::is_same_v<ReturnType, unsigned short> ||
+        std::is_same_v<ReturnType, char> || std::is_same_v<ReturnType, unsigned char> ||
+        std::is_same_v<ReturnType, bool> || std::is_same_v<ReturnType, float> ||
+        std::is_same_v<ReturnType, double> || std::is_same_v<ReturnType, size_t> ||
+        std::is_same_v<ReturnType, Int> || std::is_same_v<ReturnType, CInt> ||
+        std::is_same_v<ReturnType, UInt> || std::is_same_v<ReturnType, CUInt> ||
+        std::is_same_v<ReturnType, Long> || std::is_same_v<ReturnType, CLong> ||
+        std::is_same_v<ReturnType, ULong> || std::is_same_v<ReturnType, CULong> ||
+        std::is_same_v<ReturnType, UInt8> ||
+        std::is_same_v<ReturnType, Char> || std::is_same_v<ReturnType, CChar> ||
+        std::is_same_v<ReturnType, UChar> || std::is_same_v<ReturnType, CUChar> ||
+        std::is_same_v<ReturnType, Bool> || std::is_same_v<ReturnType, CBool> ||
+        std::is_same_v<ReturnType, Size> || std::is_same_v<ReturnType, CSize> ||
+        std::is_same_v<ReturnType, StdString> || std::is_same_v<ReturnType, CStdString>;
+    
+    if constexpr (is_primitive) {
+        // Handle primitive types
+        return SerializationUtility::convert_string_to_primitive<ReturnType>(input);
+    } else if constexpr (std::is_enum_v<ReturnType>) {
+        // Handle enum types - use template specialization if available
+        // The specialization will be automatically selected by the compiler
+        return SerializationUtility::Deserialize<ReturnType>(input);
+    } else if constexpr (SerializationUtility::is_sequential_container_v<ReturnType> || 
+                         SerializationUtility::is_associative_container_v<ReturnType>) {
+        // Handle containers - use SerializationUtility::Deserialize
+        return SerializationUtility::Deserialize<ReturnType>(input);
+    } else {
+        // Handle serializable objects - call static Deserialize() method
+        return ReturnType::Deserialize(input);
+    }
+}
+
+} // namespace serializer
 } // namespace nayan
 
 #endif // SERIALIZATION_UTILITY_H
-
