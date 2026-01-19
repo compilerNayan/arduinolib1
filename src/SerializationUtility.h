@@ -839,6 +839,9 @@ ReturnType DeserializeValue(const StdString& input) {
     if constexpr (is_primitive) {
         // Handle primitive types
         return SerializationUtility::convert_string_to_primitive<ReturnType>(input);
+    } else if constexpr (std::is_enum_v<ReturnType>) {
+        // Handle enum types - use template specialization if available
+        return SerializationUtility::Deserialize<ReturnType>(input);
     } else if constexpr (SerializationUtility::is_sequential_container_v<ReturnType> || 
                          SerializationUtility::is_associative_container_v<ReturnType>) {
         // Handle containers - use SerializationUtility::Deserialize
